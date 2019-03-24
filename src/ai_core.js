@@ -54,9 +54,7 @@ class AI_Core {
 
   // 计算牌的价值
   paijia(p) {
-
     var bplist = this.bao;
-
     function weight(num, ch) {
       if (num < 1 || 9 < num) return 0;
       var rv = 1;
@@ -68,7 +66,7 @@ class AI_Core {
 
     var rv;
     var ch = p[1];
-    var n = p[1] - 0 || 5;
+    var n = p[0] - 0 || 5;
 
     if (ch == 'z') {
       rv = this.paishu[ch][n] * weight(n,ch);
@@ -88,28 +86,49 @@ class AI_Core {
         + right * weight(n + 2,ch);
     }
 
-    if (p[1] == '0') rv *= 2;
-    if (p == 'z' + (this.zhuangfeng + 1)) rv *= 2;
-    if (p == 'z' + (this.zifeng + 1)) rv *= 2;
-    if (p.match(/^z[567]/)) rv *= 2;
+    // 红宝 翻倍
+    if (p[0] == 0) rv *= 2;
+    // 场风
+    if (p == (this.zhuangfeng + 1)+'z') rv *= 2;
+    // 自风
+    if (p == (this.zifeng + 1)+'z') rv *= 2;
+    // 中章价值高
+    if (p.match(/^[567]z/)) rv *= 2;
     rv *= weight(n,ch);
 
     return rv;
   }
 
+  // 求可以（进张）听的牌
+  fulu_tingpai(paiCount, fulu) {
+    var pai = [];
+    // 原先向听数
+    var n_xiangting = this.fulu_xiangting(paiCount, fulu);
+    for (var ch in paiCount) {
+      var bingpai = paiCount[ch];
+      for (var n = 1; n < bingpai.length; n++) {
+        if (bingpai[n] >= 4) continue;
+        paiCount[ch][n]++;
+        if (this.fulu_xiangting(paiCount, fulu) < n_xiangting)
+          //pai.push(ch + n);
+          pai.push(n+ch);
+        paiCount[ch][n]--;
+      }
+    }
+    return pai;
+  }
 
-  xiangting(shoupai) {
+  fulu_xiangting(shoupai,fulu) {
     /* 各役向けの向聴数のうち最低の向聴数を選択する */
-    var menqing = this.xiangting_menqian(shoupai);
-    var fanpai = this.xiangting_fanpai(shoupai);
-    var duanyao = this.xiangting_duanyao(shoupai);
-    var duidui = this.xiangting_duidui(shoupai);
-    var yisem = this.xiangting_yise(shoupai, 'm');
-    var yisep = this.xiangting_yise(shoupai, 'p');
-    var yises = this.xiangting_yise(shoupai, 's');
+    var menqing = this.xiangting_menqian(shoupai,fulu);
+    var fanpai = this.xiangting_fanpai(shoupai,fulu);
+    var duanyao = this.xiangting_duanyao(shoupai,fulu);
+    var duidui = this.xiangting_duidui(shoupai,fulu);
+    var yisem = this.xiangting_yise(shoupai,fulu,'m');
+    var yisep = this.xiangting_yise(shoupai,fulu,'p');
+    var yises = this.xiangting_yise(shoupai,fulu,'s');
 
-    console.log(menqing,fanpai,duanyao,duidui
-      ,yisem,yisep,yises);
+    //console.log({"鸣牌":fulu,"门清":menqing,"役牌":fanpai,"断幺九":duanyao,"对对":duidui,"m清/混一色":yisem,"p清/混一色":yisep,"s清/混一色":yises});
 
     return Math.min(
       menqing,fanpai,duanyao,duidui
@@ -118,16 +137,16 @@ class AI_Core {
   }
 
   // 向听数-门清
-  xiangting_menqian(shoupai) {
-    if (this.fuluStack.filter((m) => { return m.match(/[\-\+\=]/) }).length)
+  xiangting_menqian(shoupai,fulu) {
+    // 有副露则无穷大
+    if (fulu.filter((m) => { return m.match(/[\-\+\=]/) }).length)
       return Infinity;
-    // 副露牌がある場合は向聴数は無限大
-    return TingJudger.xiangting(shoupai);
-    // それ以外は汎用の向聴数計算ルーチンを使用
+    // 利用一般思路
+    return TingJudger.xiangting(shoupai,[]);
   }
 
   // 向听数-役牌
-  xiangting_fanpai(shoupai) {
+  xiangting_fanpai(shoupai,fulu) {
     var n_fanpai = 0, back;
     // 自风与场风 三元牌
     for (var n of [this.zhuangfeng + 1, this.zifeng + 1, 5, 6, 7]) {
@@ -136,15 +155,15 @@ class AI_Core {
       else if (shoupai.z[n] == 2 && this.paishu["z"][n] > 0) back = n;
 
       // 鳴ける可能性がある
-      for (var m of this.fuluStack) {
+      for (var m of fulu) {
         if (m[0] == 'z' && m[1] == n) n_fanpai++;
       }
     }
-    if (n_fanpai) return TingJudger.xiangting(shoupai, this.fuluStack);
+    if (n_fanpai) return TingJudger.xiangting(shoupai, fulu);
     if (back) {                                   // 役牌バックの場合
       var new_shoupai = PaiMaker.CopyCount(shoupai);            // 手牌を複製し、
       new_shoupai.z[back] = 0;             // バック対象の牌で
-      var new_fulu = this.fuluStack.concat();
+      var new_fulu = fulu.concat();
       new_fulu.push('z' + n + n + n + '=');       // 明刻を作る
       return TingJudger.xiangting(new_shoupai,new_fulu) + 1;
       // 汎用の向聴数計算ルーチンの結果に1加える
@@ -153,9 +172,9 @@ class AI_Core {
   }
 
   // 向听数-断19
-  xiangting_duanyao(shoupai) {
+  xiangting_duanyao(shoupai,fulu) {
     /* 幺九牌を含む副露(暗槓含む)がある場合、向聴数は無限大 */
-    if (this.fuluStack.filter((m) => { return m.match(/^z|[19]/) }).length) {
+    if (fulu.filter((m) => { return m.match(/^z|[19]/) }).length) {
       return Infinity;
     }
     var new_shoupai = PaiMaker.CopyCount(shoupai);  // 手牌を複製し、
@@ -164,19 +183,19 @@ class AI_Core {
         new_shoupai[s][n] = 0;      // 一九牌を引き抜く
       }
     }
-    new_shoupai.z = [0, 0, 0, 0, 0, 0, 0, 0];  // 字牌はすべて不要
-    return TingJudger.xiangting(new_shoupai,this.fuluStack);
+    // 字牌はすべて不要
+    new_shoupai.z = [0, 0, 0, 0, 0, 0, 0, 0];  
     // 汎用の向聴数計算ルーチンに処理を任せる
+    return TingJudger.xiangting(new_shoupai,fulu);
   }
 
   // 向听数-对对胡
-  xiangting_duidui(shoupai) {
+  xiangting_duidui(shoupai,fulu) {
     /* 順子の副露がある場合、向聴数は無限大 */
-    if (this.fuluStack.filter(
-      (m) => { return !m.match(/^[mpsz](\d)\1\1/) }).length)
+    if (fulu.filter((m)=>{ return !m.match(/^[mpsz](\d)\1\1/) }).length)
       return Infinity;
     /* 刻子(槓子を含む)と対子の数を数える */
-    var n_kezi = this.fuluStack.length, n_duizi = 0;
+    var n_kezi = fulu.length, n_duizi = 0;
     for (var ch in shoupai) {
       var bingpai = shoupai[ch];
       for (var n = 1; n < bingpai.length; n++) {
@@ -189,10 +208,10 @@ class AI_Core {
     return 8 - n_kezi * 2 - n_duizi;       // 向聴数を計算
   }
 
-  xiangting_yise(shoupai, sort) {
+  xiangting_yise(shoupai,fulu,sort) {
     /* sort 以外の色の副露がある場合、向聴数は無限大 */
     var regexp = new RegExp('^[^z' + sort + ']');
-    if (this.fuluStack.filter((m) => { return m.match(regexp) }).length)
+    if (fulu.filter((m) => { return m.match(regexp) }).length)
       return Infinity;
 
     /* 手牌を複製し、sort 以外の色の牌をすべて引き抜く */
@@ -200,8 +219,8 @@ class AI_Core {
     for (var s of ['m', 'p', 's']) {
       if (s != sort) new_shoupai[s] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     }
-    return TingJudger.xiangting(new_shoupai);
     // 汎用の向聴数計算ルーチンに処理を任せる
+    return TingJudger.xiangting(new_shoupai,fulu);
   }
 
   // 从统计中删除牌
@@ -209,6 +228,70 @@ class AI_Core {
     let num = pai[0] == '0'? 5 : pai[0];
     let ch = pai[1];
     this.paishu[ch][num] -= 1;
+  }
+
+  // 计算危险系数
+  Safety(pai){
+    var min = 0;
+    for (var l = 0; l < 4; l++) {
+      // 只对立直者防御？
+      if (! this.playerLizhi[l]) continue;
+      if (l == this.zifeng) continue;
+      min = Math.max(min,this.weixian(pai, l));
+    }
+    return min;
+  }
+
+  // 找出副露
+  FindFulu(mianzi){
+    var pCount = PaiMaker.GetCount(this.handStack);
+    // 向听数<3 允许吃碰
+    var n_xiangting = this.fulu_xiangting(pCount,this.fuluStack);
+    var fulou;
+    if(n_xiangting >= 0 && n_xiangting < 3){
+      console.log("副露可能: ",mianzi);
+      // 计算哪种副露形式
+      for (var m of mianzi) {
+        var new_shoupai = PaiMaker.GetFuluOff(this.handStack,m);
+        var new_fuluStack = PaiMaker.GetFulu(this.fuluStack,m);
+        // 还是3向听以上
+        let fxt = this.fulu_xiangting(new_shoupai,new_fuluStack);
+        if (fxt >= 3) continue;
+        // TODO: 评价手牌
+        // var ev = this.eval_shoupai(new_shoupai, paishu);
+        // if (ev > max) {
+        //   max = ev;
+        //   fulou = m;
+        // }
+        fulou = m;
+      }
+    }
+    return fulou;
+  }
+
+  // 找出最安全的牌？
+  FindSafe(){
+    var anquan, min = Infinity;
+    this.safe_res = [];
+    for (var p of this.handStack) {
+      var weixian = 0;
+      // 对4家进行分析
+      var w = [-1,-1,-1,-1];
+      for (var l = 0; l < 4; l++) {
+        // 只对立直者防御？
+        //if (! this.playerLizhi[l]) continue;
+        if (l == this.zifeng) continue;
+        w[l] = this.weixian(p, l);
+        if (w[l] > weixian) weixian = w[l];
+      }
+      this.safe_res.push([p,w]);
+      // 选择理论最安全的牌
+      if (weixian < min) { 
+        min = weixian;
+        anquan = p;
+      }
+    }
+    return anquan;
   }
 
   //找出要打的牌
@@ -234,23 +317,30 @@ class AI_Core {
       jicun:      { changbang: 0, lizhibang: 0 }
     };
 
-
-    var n_xiangting = TingJudger.xiangting(PaiMaker.GetCount(handStack), fuluStack);
+    
+    //var n_xiangting = TingJudger.xiangting(PaiMaker.GetCount(handStack), fuluStack);
+    var n_xiangting = this.fulu_xiangting(PaiMaker.GetCount(handStack), fuluStack);
     var max = 0, maxfen = 0;
+    var lastp;
+
     for (var i = 0; i < handStack.length; i++) {
       let p = handStack[i];
+      if(p === lastp) continue;
+      lastp = p;
       // 打牌可能な牌について以下を行う
       let newPaiCount = PaiMaker.GetCountOff(handStack,p);
       var huStack = handStack.concat();
       huStack.splice(i,1);
-      let new_xiangting = TingJudger.xiangting(newPaiCount, fuluStack);
+      //let new_xiangting = TingJudger.xiangting(newPaiCount, fuluStack);
+      let new_xiangting = this.fulu_xiangting(newPaiCount, fuluStack);
       // 不选择向听数增加的情形？
       if (new_xiangting > n_xiangting){
         //this.cal_res.push([p,new_xiangting,0,0]);
         //continue;
       }
       // 获取有效进张（等待牌）
-      var tingpai = TingJudger.tingpai(newPaiCount, fuluStack);
+      //var tingpai = TingJudger.tingpai(newPaiCount, fuluStack);
+      var tingpai = this.fulu_tingpai(newPaiCount, fuluStack);
       // 统计枚数(牌价值)
       var x = 1 - this.paijia(p)/100;
       var hufen = 0;
@@ -285,8 +375,12 @@ class AI_Core {
         this.cal_res.push([p,new_xiangting,tingpai,x,hufen]);
       }
       
-      if (hufen >= maxfen || x >= max) {
+      // 可能胡牌得分总和越大
+      if (hufen>0 && hufen >= maxfen){
         maxfen = hufen;
+        dapai = p;
+      }
+      else if (x >= max) {
         max = x;
         dapai = p;
       }

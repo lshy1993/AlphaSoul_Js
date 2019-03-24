@@ -20,6 +20,7 @@ class PaiMaker {
     return paiCount;
   }
 
+  // 复制牌统计
   static CopyCount(pcount){
     var newCount = {
       m: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -31,6 +32,50 @@ class PaiMaker {
       newCount[ch] = pcount[ch].concat();
     }
     return newCount;
+  }
+
+  // 获取副露后的代码
+  static FuluCode(mianzi){
+    var ch,code = "";
+    for(var p of mianzi.split("|")){
+      ch = p[1];
+      code += p;
+    }
+    code = code.replace(new RegExp(ch,"g"),"");
+    return ch+code;
+  }
+
+  // 计算副露后的统计
+  static GetFuluOff(plist,mianzi){
+    var newPaiCount = PaiMaker.GetCount(plist);
+    var mz;
+    if(mianzi[1] == 6){
+      // 加杠牌
+      mz = [ mianzi[0].split("|")[1] ];
+    }else{
+      mz = mianzi[0].split("|");
+    }
+    for(var p of mz){
+      let num = p[0];
+      let ch = p[1];
+      newPaiCount[ch][num]--;
+    }
+    return newPaiCount;
+  }
+
+  // 获得新的副露堆
+  static GetFulu(fulu,mianzi){
+    var new_fulu = fulu.concat();
+    if(mianzi[1] == 6){
+      // 加杠
+      let ori = mianzi[0].split("|");
+      for(var i in new_fulu){
+        if(new_fulu[i] == ori) new_fulu[i] = mianzi[0];
+      }
+    }else{
+      new_fulu = new_fulu.concat(this.FuluCode(mianzi[0]));
+    }
+    return new_fulu;
   }
 
   // 计算打出后的统计
@@ -45,7 +90,7 @@ class PaiMaker {
 
   static GetBao(baostr) {
     // 根据宝牌代码获取真宝牌
-    var num = baostr[0] - '0';
+    var num = baostr[0] - 0 || 5;
     var ch = baostr[1];
     if (ch == 'z') {
       if (num == 4) num = 1;
@@ -70,7 +115,106 @@ class PaiMaker {
 
 }
 
+class MianziMaker{
+  // 是否能吃
+  static get_chi_mianzi(pCount,fulu,p) {
+      var mianzi = [];
+      var s = p[1];
+      var n = p[0] -0 || 5;
+      var d = p[2];
+      var bingpai = pCount[s];
+      var p1, p2;
+      // 上家打牌 && 非字牌
+      if (s != 'z' && d == '-') {
+          // n-2 n-1 n
+          if (3 <= n && bingpai[n-2] > 0 && bingpai[n-1] > 0) {
+              p1 = ((n-2 == 5 && bingpai[0] > 0) ? 0 : n-2) + s;
+              p2 = ((n-1 == 5 && bingpai[0] > 0) ? 0 : n-1) + s;
+              if (fulu.length == 3 && bingpai[n] == 1 && 3 < n && bingpai[n-3] == 1)
+                  ;
+              else mianzi.push([p1+"|"+p2+"|"+p,2]);
+          }
+          // n n+1 n+2
+          if (n <= 7 && bingpai[n+1] > 0 && bingpai[n+2] > 0) {
+              p1 = ((n+1 == 5 && bingpai[0] > 0) ? 0 : n+1) + s;
+              p2 = ((n+2 == 5 && bingpai[0] > 0) ? 0 : n+2) + s;
+              if (fulu.length == 3 && bingpai[n] == 1 && n < 7 && bingpai[n+3] == 1)
+                  ;
+              else mianzi.push([p+"|"+p1+"|"+p2,2]);
+          }
+          // n-1 n n+1
+          if (2 <= n &&  n <= 8 && bingpai[n-1] > 0 && bingpai[n+1] > 0) {
+              p1 = ((n-1 == 5 && bingpai[0] > 0) ? 0 : n-1) + s;
+              p2 = ((n+1 == 5 && bingpai[0] > 0) ? 0 : n+1) + s;
+              mianzi.push([p1+"|"+p+"|"+p2,2]);
+          }
+      }
+      return mianzi;
+  }
+  // 是否能碰
+  static get_peng_mianzi(pCount,fulu,p) {
+      var mianzi = [];
+      var s = p[1];
+      var n = p[0] -0 || '5';
+      var d = p[2];
+      var bingpai = pCount[s];
 
+      if (d != '_' && bingpai[n] >= 2) {
+          var p1 = ((n == 5 && bingpai[0] > 1) ? 0 : n) + s;
+          var p2 = ((n == 5 && bingpai[0] > 0) ? 0 : n) + s;
+          mianzi = [[p1+"|"+p2+"|"+p,3]];
+      }
+      return mianzi;
+  }
+  // 是否能杠
+  static get_gang_mianzi(pCount,fulu,p) {
+      var mianzi = [];
+      var s = p[1];
+      var n = p[0]-'0' || 5;
+      var shoupai = pCount;
+      var bingpai = shoupai[s];
+      console.log(s,n);
+      // 明杠
+      if (bingpai[n] == 3) {
+          var p1 = ((n == 5 && bingpai[0] > 2) ? 0 : n)+s;
+          var p2 = ((n == 5 && bingpai[0] > 1) ? 0 : n)+s;
+          var p3 = ((n == 5 && bingpai[0] > 0) ? 0 : n)+s;
+          mianzi.push([p1+"|"+p2+"|"+p3+"|"+p,5]);
+      }
+      // 暗/加杠
+      for (var s in shoupai) {
+          var bingpai = shoupai[s];
+          for (var n = 1; n < bingpai.length; n++) {
+              if (bingpai[n] == 0) continue;
+              if (bingpai[n] == 4) {
+                  var p0 = ((n == 5 && bingpai[0] > 3) ? 0 : n)+s;
+                  var p1 = ((n == 5 && bingpai[0] > 2) ? 0 : n)+s;
+                  var p2 = ((n == 5 && bingpai[0] > 1) ? 0 : n)+s;
+                  var p3 = ((n == 5 && bingpai[0] > 0) ? 0 : n)+s;
+                  mianzi.push([p0+"|"+p1+"|"+p2+"|"+p3,4]);
+              }
+              else {
+                  for (var m of fulu) {
+                      if (m.replace(/0/g,'5').substr(0,4) == s+n+n+n) {
+                          var p0 = ((n == 5 && bingpai[0] > 0) ? 0 : n)+s;
+                          mianzi.push([m+"|"+p0,6]);
+                      }
+                  }
+              }
+          }
+      }
+      return mianzi;
+  }
+
+  static GetFuluMianzi(handStack,fuluStack,hupai){
+    var pCount = PaiMaker.GetCountOff(handStack,hupai);
+    var fulumz = this.get_gang_mianzi(pCount,fuluStack,hupai+'-')
+        .concat(this.get_peng_mianzi(pCount,fuluStack,hupai+'-'))
+        .concat(this.get_chi_mianzi(pCount,fuluStack,hupai+'-'));
+    return fulumz;
+  }
+
+}
 
 class TingJudger {
   static _xiangting(m, d, g, j) {
@@ -95,6 +239,7 @@ class TingJudger {
     return 13 - m * 3 - d * 2 - g;
   }
 
+  // 求向听数
   static xiangting(paiCount, fulu) {
     var max = this.xiangting_yiban(paiCount, fulu);
     //if (fulu == undefined || fulu.length > 1) return max;
@@ -160,7 +305,7 @@ class TingJudger {
           var n_guli = m[2] + p[2] + s[2] + z[2];
           if (n_mianzi + n_dazi > 4) n_dazi = 4 - n_mianzi;
           // 搭子过多修正
-          var xiangting = TingJudger._xiangting(n_mianzi, n_dazi, n_guli, jiangpai);
+          var xiangting = this._xiangting(n_mianzi, n_dazi, n_guli, jiangpai);
           min_xiangting = Math.min(xiangting, min_xiangting);
         }
       }
@@ -1012,5 +1157,5 @@ class PtJudger {
 }
 
 export {
-  PaiMaker, TingJudger, RonJudger, PtJudger
+  PaiMaker, TingJudger, RonJudger, PtJudger, MianziMaker
 };
