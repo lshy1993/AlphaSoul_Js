@@ -9,9 +9,6 @@
       </div>
       <div style="margin:10px;">{{ handStack }}</div>
       <div>
-        <button @click="clearHand">清空</button>
-        <button @click="sortPai">整理</button>
-        <button @click="judgeTing">判定</button>
         场风
         <select v-model="param.zhuangfeng">
           <option value ="0">东</option>
@@ -44,6 +41,11 @@
         <label for="haidi">
           <input type="checkbox" id="haidi" v-model="param.hupai.haidi">海底
         </label>
+        <button @click="paiGen">随机生成</button>
+        <button @click="clearHand">清空</button>
+        <button @click="sortPai">整理</button>
+        <button @click="judgeTing">判定</button>
+        
       </div>
     </div>
     <div class="PaiSelector">
@@ -63,6 +65,7 @@
       <h2 v-for="(fan,index) in ptResult.hupai" :key="index">
         {{ fan.name + fan.fanshu }}
       </h2>
+      <h1>{{  ptResult.fu+"符"+ptResult.fanshu+"番" }}</h1>
       <h1>{{ ptResult.defen }}</h1>
     </div>
     <div v-if="mode == 1">
@@ -81,11 +84,11 @@
           <tr>
             <th style="width:60px">切牌</th>
             <th style="width:50px;min-width:20px;">向听</th>
-            <th style="width:800px;min-width:200px;">进张（听牌）</th>
-            <th style="width:100px;min-width:50px">牌效</th>
-            <th style="width:100px;min-width:50px">得分</th>
+            <th style="min-width:200px;">进张（听牌）</th>
+            <th style="width:100px;min-width:50px">牌效*</th>
+            <th style="width:100px;min-width:50px">得分*</th>
           </tr>
-          <tr v-for="(list,index) in cal_res" :key="index" :class="list[1]>n_xiangting?'Bad':'Good'">
+          <tr v-for="(list,index) in cal_res" :style="list[1]>n_xiangting?'background:rgba(224,54,54,0.5)':'background:rgba(159, 240, 72,'+(list[3]/50).toFixed(2)+')'" :key="index" >
             <td>
               <img :src="imgUrl(list[0])" width="40" height="65"/>
             </td>
@@ -100,6 +103,8 @@
             <td>{{ list[4] }}</td>
           </tr>
         </table>
+        <div>*AlphaSoul的牌效计算值</div>
+        <div>**胡牌得点×剩余枚数</div>
       </div>
     </div>
     <div v-if="mode == 0" class="HintBox">
@@ -196,6 +201,9 @@ export default {
     this.aiplayer = new AI_Core();
   },
   methods:{
+    paiGen: function(){
+
+    },
     addPai: function(num,ch){
       console.log(ch,num);
       if(this.handStack.length<14 && this.paishu[ch][num]>0){
@@ -314,10 +322,11 @@ export default {
 
 <style>
 .HintBox{
-  text-align: center;
+  text-align: left;
   margin: 10px;
 }
 .BoxHead{
+  text-align: center;
   padding: 5px;
   margin-bottom: 5px; 
 }
