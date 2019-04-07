@@ -5,6 +5,7 @@
       <div style="display:inline-block;">
         <div v-for="(code,index) in handStack" :key="index" @click="removePai(index)" :class="['PaiDiv', index==13?'Last':'']">
           <img :src="imgUrl(code)" width="80" height="129"/>
+          <div :style="'mix-blend-mode:color; background:rgba(159, 240, 72,'+normalized[code]/2+')'" class="PaiDiv BigMask" />
         </div>
       </div>
       <div style="margin:10px;">{{ handStack }}</div>
@@ -68,47 +69,63 @@
       <h1>{{  ptResult.fu+"符"+ptResult.fanshu+"番" }}</h1>
       <h1>{{ ptResult.defen }}</h1>
     </div>
-    <div v-if="mode == 1">
-      <div v-if="fulumz.length>0" class="HintBox">
-        <div style="background: green; color:white;" class="BoxHead">副露可能</div>
-        <div v-for="(opt,index) in fulumz" :key="index">
-          {{ fuluDisp[opt[1]]+"："}}
-          <div v-for="(p,index) in opt[0].split('|')" :key="index" class="PaiDiv">
-            <img :src="imgUrl(p[0]+p[1])" width="40" height="65"/>
-          </div>
-        </div>
-      </div>
-      <div class="HintBox">
-        <div style="background: green; color:white;" class="BoxHead">切牌提示</div>
-        <table>
-          <tr>
-            <th style="width:60px">切牌</th>
-            <th style="width:50px;min-width:20px;">向听</th>
-            <th style="min-width:200px;">进张（听牌）</th>
-            <th style="width:100px;min-width:50px">牌效*</th>
-            <th style="width:100px;min-width:50px">得分*</th>
-          </tr>
-          <tr v-for="(list,index) in cal_res" :style="list[1]>n_xiangting?'background:rgba(224,54,54,0.5)':'background:rgba(159, 240, 72,'+(list[3]/50).toFixed(2)+')'" :key="index" >
-            <td>
-              <img :src="imgUrl(list[0])" width="40" height="65"/>
-            </td>
-            <td>{{ list[1] }}</td>
-            <td class="PaiList">
-              <div v-for="(pcode,ind) in list[2]" :key="ind" :class="['PaiDiv']">
-                <img :src="imgUrl(pcode)" width="40" height="65"/>
-                ×{{ paishu[pcode[1]][pcode[0]] }}
-              </div>
-            </td>
-            <td>{{ list[3].toFixed(2) }}</td>
-            <td>{{ list[4] }}</td>
-          </tr>
-        </table>
-        <div>*AlphaSoul的牌效计算值</div>
-        <div>**胡牌得点×剩余枚数</div>
-      </div>
+    <div v-if="fulumz.length>0" class="HintBox">
+      <div style="background: green; color:white;" class="BoxHead">副露可能</div>
+      <table>
+        <tr>
+          <th>种类</th>
+          <th>副露</th>
+          <th>EV</th>
+        </tr>
+        <tr v-for="(opt,index) in fulu_res" :key="index">
+          <td>{{ fuluDisp[opt[1]]+"："}}</td>
+          <td>
+            <div v-for="(p,index) in opt[0].split('|')" :key="index" class="PaiDiv">
+              <img :src="imgUrl(p[0]+p[1])" width="40" height="65"/>
+            </div>
+          </td>
+          <td>{{ opt[2] }}</td>
+        </tr>
+      </table>
+    </div>
+    <div v-if="mode == 1" class="HintBox">
+      <div style="background: green; color:white;" class="BoxHead">
+        <label for="negative">
+          <input type="checkbox" id="negative" v-model="badOption">显示所有
+        </label>
+        切牌提示</div>
+      <table>
+        <tr>
+          <th style="width:60px">切牌</th>
+          <th style="width:50px;min-width:20px;">向听</th>
+          <th style="min-width:200px;">进张（听牌）</th>
+          <th style="width:100px;min-width:50px">牌效<sup>*1</sup></th>
+          <th style="width:100px;min-width:50px">牌重<sup>*2</sup></th>
+          <th style="width:100px;min-width:50px">得分<sup>*3</sup></th>
+        </tr>
+        <tr v-for="(list,index) in resShow" :style="list[1]>n_xiangting?'background:rgba(224,54,54,0.5)':'background:rgba(159, 240, 72,'+normalized[list[0]]+')'" :key="index" >
+          <td>
+            <img :src="imgUrl(list[0])" width="40" height="65"/>
+          </td>
+          <td>{{ list[1] }}</td>
+          <td class="PaiList">
+            <div v-for="(pcode,ind) in list[2]" :key="ind" :class="['PaiDiv']">
+              <img :src="imgUrl(pcode)" width="40" height="65"/>
+              ×{{ paishu[pcode[1]][pcode[0]] }}
+            </div>
+          </td>
+          <td>{{ Math.floor(list[3]) }}</td>
+          <td>{{ (list[3]-Math.floor(list[3])).toFixed(2) }}</td>
+          <td>{{ list[4] }}</td>
+        </tr>
+      </table>
+      <div>(1: 进章总数</div>
+      <div>(2: 牌的重要程度，越小越重要</div>
+      <div>(3: 胡牌得点×剩余枚数</div>
+      <div>*: AlphaSoul的价效值</div>
     </div>
     <div v-if="mode == 0" class="HintBox">
-      <div style="background: skyblue; color:white;" class="BoxHead">{{ n_xiangting == 0?"听牌": n_xiangting+"向听 有效进张" }}</div>
+      <div style="background: skyblue; color:white;" class="BoxHead">{{ n_xiangting == 0?"听牌": n_xiangting+"向听" }}</div>
       <table>
         <tr>
           <th style="min-width: 60px">{{ n_xiangting == 0?"听牌":"进张" }}</th>
@@ -140,8 +157,8 @@
 </template>
 
 <script>
-import { PaiMaker,TingJudger, PtJudger, RonJudger,MianziMaker } from '../majtool.js';
-import { AI_Core } from '../ai_core.js';
+import { PaiMaker,TingJudger, PtJudger, RonJudger,MianziMaker } from '../js/majtool.js';
+import { AI_Core } from '../js/ai_core.js';
 
 export default {
   name: 'MajMain',
@@ -150,7 +167,9 @@ export default {
       handStack: [ "1m", "1m", "2m", "2m", "3m", "3m", "4m", "4m", "5m", "5m", "6m", "6m", "7m", "7m" ],
       fuluStack: [],
       cal_res: [],
+      normalized: {},
       ting_res: [],
+      fulu_res: [],
       fulumz: [],
       paishu: {
         'm': [1, 4, 4, 4, 4, 4, 4, 4, 4, 4],
@@ -194,15 +213,47 @@ export default {
       mode: 0,
       ptResult: Object,
       aiplayer: Object,
-      selectorOn: true
+      selectorOn: true,
+      badOption: false
     }
   },
   created(){
     this.aiplayer = new AI_Core();
   },
+  computed:{
+    resShow: function(){
+      var result = [];
+      result = this.cal_res.filter((ele)=>{
+        return this.badOption || ele[1] <= this.n_xiangting;
+      });
+      return result;
+    }
+  },
   methods:{
     paiGen: function(){
-
+      this.normalized = {};
+      var resArr = [], resList = [];
+      for(var i=0;i<136;i++){
+        resArr.push(i);
+      }
+      for(var i=135;i>0;i--)
+      {
+        var k = Math.floor(Math.random()*i);
+        var temp = resArr[k];
+        resArr[k] = resArr[i];
+        resArr[i] = temp;
+      }
+      // 生成牌
+      for (var i=0;i<14;i++)
+      {
+        var p = resArr[i];
+        var k = p % 34;
+        // 初始宝牌设定
+        var kn = p==4?'0m':p==13?'0p':p==22?'0s':this.paiCode[k];
+        resList.push(kn);
+      }
+      this.handStack = resList;
+      this.sortPai();
     },
     addPai: function(num,ch){
       console.log(ch,num);
@@ -229,15 +280,30 @@ export default {
       //this.judgeTing();
     },
     clearHand: function(){
+      this.normalized = {};
       this.handStack = [];
       this.cal_res = [];
       this.n_xiangting = 0;
       this.ptResult = Object;
     },
+    normalize: function(){
+      this.normalized = {};
+      var min = Infinity,max = 0;
+      for(var res of this.cal_res){
+        if(res[3] == -1)continue;
+        min = Math.min(min,res[3]);
+        max = Math.max(max,res[3]);
+      }
+      for(var res of this.cal_res){
+        this.normalized[res[0]] =res[3] == -1?0:((res[3]-min)/(max-min)).toFixed(2);
+      }
+      //if(plist[num] == undefined) return 0;
+    },
     imgUrl: function(code){
       return "/img/"+code+".png";
     },
     judgeTing: function(){
+      this.normalized = {};
       //统计牌数
       this.paishu = this.countPai();
       if(this.handStack.length == 13){
@@ -267,14 +333,11 @@ export default {
         }
         this.ting_res = tingRes;
       }else if(this.handStack.length == 14){
-        var pcount = PaiMaker.GetCount(this.handStack);
-        this.n_xiangting = TingJudger.xiangting(pcount, this.fuluStack);
+        this.n_xiangting =  this.aiplayer.fulu_xiangting(this.handStack,this.fuluStack);
+        var hupai = this.handStack[this.handStack.length-1];
         if(this.n_xiangting == -1){
           this.mode = -1;
-          let hupai = this.handStack[this.handStack.length-1]+'_';
-          //console.log(RonJudger.Ron(this.handStack,hupai,this.fuluStack));
-          //console.log(hupai);
-          this.ptResult = PtJudger.GetFen(this.handStack,this.fuluStack,hupai,this.param)
+          this.ptResult = PtJudger.GetFen(this.handStack,this.fuluStack,hupai+'_',this.param)
         }else{
           this.mode = 1;
           this.aiplayer.handStack = this.handStack;
@@ -282,21 +345,16 @@ export default {
           var dapai = this.aiplayer.FindQie()
           //console.log("打牌：", dapai);
           this.cal_res = this.aiplayer.cal_res;
+          this.normalize();
         }
+        this.fulumz = MianziMaker.GetFuluMianzi(this.handStack,this.fuluStack,hupai);
+        this.fulu_res = this.aiplayer.FindFulu(this.fulumz);
       }else{
         this.xiangting = 8;
         this.cal_res = [];
         this.ting_res = [];
         return;
       }
-      var hupai = this.handStack[this.handStack.length-1];
-      var fulu_xiangting = this.aiplayer.fulu_xiangting(pcount,[]);
-      console.log("副露向听：", fulu_xiangting);
-      this.fulumz = MianziMaker.GetFuluMianzi(this.handStack,this.fuluStack,hupai);
-      var mm = this.aiplayer.FindFulu(this.fulumz);
-      console.log("副露选择：",mm);
-      //console.log("向听数：", this.n_xiangting);
-      
     },
     countPai: function(){
       var paiCount = {
@@ -331,6 +389,7 @@ export default {
   margin-bottom: 5px; 
 }
 .PaiSelector{
+  z-index: 1001;
   position:fixed;
   right:0;
   bottom:0;
@@ -350,7 +409,15 @@ td {
   text-align: left;
 }
 .PaiDiv {
+  position: relative;
   display: inline-block;
+}
+.BigMask {
+  width: 80px;
+  height: 129.5px;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 .Last{
   margin-left: 30px;

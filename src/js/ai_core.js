@@ -96,29 +96,34 @@ class AI_Core {
     if (p.match(/^[567]z/)) rv *= 2;
     rv *= weight(n,ch);
 
+    //console.log("牌：",p,"权重：",rv);
     return rv;
   }
 
   // 求可以（进张）听的牌
-  fulu_tingpai(paiCount, fulu) {
+  fulu_tingpai(hand, fulu) {
     var pai = [];
     // 原先向听数
-    var n_xiangting = this.fulu_xiangting(paiCount, fulu);
+    var n_xiangting = this.fulu_xiangting(hand, fulu);
+    var paiCount = PaiMaker.GetCount(hand);
     for (var ch in paiCount) {
       var bingpai = paiCount[ch];
       for (var n = 1; n < bingpai.length; n++) {
         if (bingpai[n] >= 4) continue;
-        paiCount[ch][n]++;
-        if (this.fulu_xiangting(paiCount, fulu) < n_xiangting)
-          //pai.push(ch + n);
+        var new_hand = hand.concat(n+ch);
+        if (this.fulu_xiangting(new_hand, fulu) < n_xiangting){
           pai.push(n+ch);
-        paiCount[ch][n]--;
+          if(n == 5 && this.paishu[ch][0]>0){
+            pai.push(0+ch);
+          }
+        }
       }
     }
     return pai;
   }
 
-  fulu_xiangting(shoupai,fulu) {
+  fulu_xiangting(hand,fulu) {
+    var shoupai = PaiMaker.GetCount(hand);
     /* 各役向けの向聴数のうち最低の向聴数を選択する */
     var menqing = this.xiangting_menqian(shoupai,fulu);
     var fanpai = this.xiangting_fanpai(shoupai,fulu);
@@ -244,26 +249,28 @@ class AI_Core {
 
   // 找出副露
   FindFulu(mianzi){
-    var pCount = PaiMaker.GetCount(this.handStack);
     // 向听数<3 允许吃碰
-    var n_xiangting = this.fulu_xiangting(pCount,this.fuluStack);
-    var fulou;
+    var n_xiangting = this.fulu_xiangting(this.handStack,this.fuluStack);
+    var fulou = [];
     if(n_xiangting >= 0 && n_xiangting < 3){
-      console.log("副露可能: ",mianzi);
-      // 计算哪种副露形式
+      var max = this.EvalHand(this.handStack,this.fuluStack,this.paishu);
+      console.log(this.paishu);
+      console.log("门清收益：",max,"副露可能: ",mianzi);
+      // 计算每种副露形式的收益
       for (var m of mianzi) {
-        var new_shoupai = PaiMaker.GetFuluOff(this.handStack,m);
+        var new_handStack = PaiMaker.GetFuluOff(this.handStack,m);
         var new_fuluStack = PaiMaker.GetFulu(this.fuluStack,m);
         // 还是3向听以上
-        let fxt = this.fulu_xiangting(new_shoupai,new_fuluStack);
+        let fxt = this.fulu_xiangting(new_handStack,new_fuluStack);
         if (fxt >= 3) continue;
         // TODO: 评价手牌
-        // var ev = this.eval_shoupai(new_shoupai, paishu);
+        var ev = this.EvalHand(new_handStack,new_fuluStack,this.paishu);
+        fulou.push(m.concat(ev));
+        // console.log(m,ev);
         // if (ev > max) {
         //   max = ev;
         //   fulou = m;
         // }
-        fulou = m;
       }
     }
     return fulou;
@@ -317,9 +324,8 @@ class AI_Core {
       jicun:      { changbang: 0, lizhibang: 0 }
     };
 
-    
     //var n_xiangting = TingJudger.xiangting(PaiMaker.GetCount(handStack), fuluStack);
-    var n_xiangting = this.fulu_xiangting(PaiMaker.GetCount(handStack), fuluStack);
+    var n_xiangting = this.fulu_xiangting(handStack, fuluStack);
     var max = 0, maxfen = 0;
     var lastp;
 
@@ -328,11 +334,9 @@ class AI_Core {
       if(p === lastp) continue;
       lastp = p;
       // 打牌可能な牌について以下を行う
-      let newPaiCount = PaiMaker.GetCountOff(handStack,p);
       var huStack = handStack.concat();
       huStack.splice(i,1);
-      //let new_xiangting = TingJudger.xiangting(newPaiCount, fuluStack);
-      let new_xiangting = this.fulu_xiangting(newPaiCount, fuluStack);
+      let new_xiangting = this.fulu_xiangting(huStack, fuluStack);
       // 不选择向听数增加的情形？
       if (new_xiangting > n_xiangting){
         //this.cal_res.push([p,new_xiangting,0,0]);
@@ -340,7 +344,7 @@ class AI_Core {
       }
       // 获取有效进张（等待牌）
       //var tingpai = TingJudger.tingpai(newPaiCount, fuluStack);
-      var tingpai = this.fulu_tingpai(newPaiCount, fuluStack);
+      var tingpai = this.fulu_tingpai(huStack, fuluStack);
       // 统计枚数(牌价值)
       var x = 1 - this.paijia(p)/100;
       var hufen = 0;
@@ -350,15 +354,15 @@ class AI_Core {
         x += this.paishu[ch][num];
         // 听牌(向听为0)时，计算可能的胡牌分数
         if(new_xiangting > 0) continue;
-        if(num == 5){
-          // 红宝 增加一次计算
-          let red_tp = 0+ch;
-          let ptres = PtJudger.GetFen(huStack.concat(red_tp),fuluStack,red_tp,param);
-          //console.log(p,red_tp,ptres);
-          if(ptres.defen > 0){
-            hufen += ptres.defen*this.paishu[ch][0];
-          }
-        }
+        // if(num == 5){
+        //   // 红宝 增加一次计算
+        //   let red_tp = 0+ch;
+        //   let ptres = PtJudger.GetFen(huStack.concat(red_tp),fuluStack,red_tp,param);
+        //   //console.log(p,red_tp,ptres);
+        //   if(ptres.defen > 0){
+        //     hufen += ptres.defen*this.paishu[ch][0];
+        //   }
+        // }
         var new_huStack = huStack.concat(tp);
         var ptres = PtJudger.GetFen(new_huStack,fuluStack,tp,param);
         //console.log(p,tp,ptres);
@@ -386,6 +390,118 @@ class AI_Core {
       }
     }
     return dapai;
+  }
+
+  // 从目前手牌中挑选能够打出的牌
+  PickDapai(handStack,fuluStack){
+    var pai = [];
+    // 禁手
+    var deny = {};
+    var mopai = fuluStack[fuluStack.length - 1];
+    var n = mopai && +mopai.match(/\d(?=[\-\+\=])/);
+    // 设置副露吃碰后的禁手
+    if (n) {
+      deny[s+n] = true;
+      if (! mopai.match(/^[mpsz](\d)\1\1.*$/)) {
+          if (n < 7 && mopai.match(/^[mps]\d\-\d\d$/)) deny[(n+3)+s] = true;
+          if (3 < n && mopai.match(/^[mps]\d\d\d\-$/)) deny[(n-3)+s] = true;
+      }
+    }
+    var pCount = PaiMaker.GetCount(handStack);
+    for (var s of ['m','p','s','z']) {
+      var bingpai =  pCount[s];
+      for (var n = 1; n < bingpai.length; n++) {
+        if (bingpai[n] == 0) continue;
+        if (deny[n+s]) continue;
+        if (n != 5){
+          pai.push(n+s);
+        }
+        else {
+          if (bingpai[0] > 0)             pai.push('0'+s);
+          if (bingpai[0] < bingpai[5])    pai.push('5'+s);
+        }
+      }
+    }
+    return pai; 
+  }
+
+  GetFen(handStack,fuluStack){
+    // 预估胡牌分用参数
+    var param = {
+      zhuangfeng: this.zhuangfeng,
+      menfeng: this.zifeng,
+      hupai: {
+        lizhi:      0,
+        yifa:       0,
+        qianggang:  false,
+        lingshang:  false,
+        haidi:      0,
+        tianhu:     0
+      },
+      baopai: this.bao,
+      fubaopai: [],
+      jicun: { changbang: 0, lizhibang: 0 }
+    };
+    // 价值则为胡牌得分
+    var hupai = handStack[handStack.length - 1];
+    //console.log(hupai);
+    return PtJudger.GetFen(handStack,fuluStack,hupai+'_',param).defen;
+  }
+
+  // 综合评价手牌
+  EvalHand(handStack,fuluStack,paishu){
+    // 当前向听数
+    var n_xiangting = this.fulu_xiangting(handStack,fuluStack);
+    // 已经和牌情形
+    if (n_xiangting == -1) {
+      return this.GetFen(handStack,fuluStack);
+    }
+    // 如果是需要切牌的状态
+    if (handStack.length+fuluStack.length*3 == 14) {
+      // 摸牌/副露后 选择不减少向听数里最大的
+      var max = 0;
+      var plist = this.PickDapai(handStack,fuluStack);
+      for (var p of plist) {
+        // 克隆一副手牌
+        var new_handStack = handStack.concat();
+        new_handStack.splice(new_handStack.indexOf(p),1);
+        //var new_shoupai = PaiMaker.GetCount(new_handStack);
+        if (this.fulu_xiangting(new_handStack,fuluStack) > n_xiangting) continue;
+        var r = this.EvalHand(new_handStack,fuluStack,paishu);
+        // console.log(new_handStack.toString(),r);
+        if (r > max) max = r;
+      }
+      return max;
+    }
+    // 3向听以内
+    if (n_xiangting < 3) {
+      // 价值为 进章的得分*枚数    
+      var r = 0;
+      var tingpai = this.fulu_tingpai(handStack, fuluStack);
+      for (var p of tingpai) {
+        let num = p[0];
+        let ch = p[1];
+        if (paishu[ch][num] == 0) continue;
+        var new_shoupai = handStack.concat(p+'_');
+        paishu[ch][num]--;
+        // 继续搜索
+        var ev = this.EvalHand(new_shoupai,fuluStack,paishu);
+        paishu[ch][num]++;
+        r += ev * paishu[ch][num];
+      }
+      return r;
+    }else{
+      /* 3向聴以前の場合は今までのアルゴリズムで評価 */
+      var r = 0;
+      for (var p of this.fulu_tingpai(handStack,fuluStack)) {
+        let num = p[0];
+        let ch = p[1];
+        if (paishu[ch][num] == 0) continue;
+        r += paishu[ch][num] * (p[2] == '+' ? 4 : p[2] == '-' ? 2 : 1);
+      }
+      return r;
+    }
+
   }
 
   InitStatus(action) {

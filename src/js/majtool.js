@@ -47,7 +47,7 @@ class PaiMaker {
 
   // 计算副露后的统计
   static GetFuluOff(plist,mianzi){
-    var newPaiCount = PaiMaker.GetCount(plist);
+    var newHand = plist.concat();
     var mz;
     if(mianzi[1] == 6){
       // 加杠牌
@@ -56,11 +56,10 @@ class PaiMaker {
       mz = mianzi[0].split("|");
     }
     for(var p of mz){
-      let num = p[0];
-      let ch = p[1];
-      newPaiCount[ch][num]--;
+      let ii = newHand.indexOf(p);
+      newHand.splice(ii,1);
     }
-    return newPaiCount;
+    return newHand;
   }
 
   // 获得新的副露堆
@@ -78,9 +77,21 @@ class PaiMaker {
     return new_fulu;
   }
 
+  /* 计算摸到牌后的统计 */
+  static GetCountAdd(hand,p){
+    var newPaiCount = PaiMaker.GetCount(hand);
+    let ch = p[1];
+    let num = p[0];
+    if(num == 0){
+      newPaiCount[ch][5]++;
+    }
+    newPaiCount[ch][num]++;
+    return newPaiCount;
+  }
+
   // 计算打出后的统计
-  static GetCountOff(plist,p){
-    var newPaiCount = PaiMaker.GetCount(plist);
+  static GetCountOff(hand,p){
+    var newPaiCount = PaiMaker.GetCount(hand);
     if(p[0] == 0){
       newPaiCount[p[1]][5]--;
     }
