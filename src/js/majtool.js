@@ -812,7 +812,7 @@ class PtJudger {
     if (n_hongpai) post_hupai.push({ name: '赤ドラ', fanshu: n_hongpai });
     var n_fubaopai = 0;
     for (var p of fubaopai) {
-      p = Majiang.Shan.zhenbaopai(p);
+      p = PaiMaker.GetBao(p);
       var regexp = new RegExp(p[1], 'g');
       for (var str of substr) {
         if (str[0] != p[0]) continue;
