@@ -159,6 +159,7 @@
 <script>
 import { PaiMaker,TingJudger, PtJudger, RonJudger,MianziMaker } from '../js/majtool.js';
 import { AI_Core } from '../js/ai_core.js';
+import qs from 'qs';
 
 export default {
   name: 'MajMain',
@@ -177,19 +178,6 @@ export default {
         's': [1, 4, 4, 4, 4, 4, 4, 4, 4, 4],
         'z': [0, 4, 4, 4, 4, 4, 4, 4]
       },
-      paiCode: [
-        "1m","2m","3m","4m","5m","6m","7m","8m","9m",
-        "1p","2p","3p","4p","5p","6p","7p","8p","9p",
-        "1s","2s","3s","4s","5s","6s","7s","8s","9s",
-        "1z","2z","3z","4z","5z","6z","7z"
-      ],
-      paiDisp: [
-        "一","二","三","四","五","六","七","八","九",
-        "①","②","③","④","⑤","⑥","⑦","⑧","⑨",
-        "１","２","３","４","５","６","７","８","９",
-        "東","南","西","北", //场风
-        "白","發","中" //役牌
-      ],
       fuluDisp:{
         2:"吃", 3:"碰", 4:"暗杠", 5:"明杠", 6:"加杠"
       },
@@ -232,27 +220,8 @@ export default {
   methods:{
     paiGen: function(){
       this.normalized = {};
-      var resArr = [], resList = [];
-      for(var i=0;i<136;i++){
-        resArr.push(i);
-      }
-      for(var i=135;i>0;i--)
-      {
-        var k = Math.floor(Math.random()*i);
-        var temp = resArr[k];
-        resArr[k] = resArr[i];
-        resArr[i] = temp;
-      }
-      // 生成牌
-      for (var i=0;i<14;i++)
-      {
-        var p = resArr[i];
-        var k = p % 34;
-        // 初始宝牌设定
-        var kn = p==4?'0m':p==13?'0p':p==22?'0s':this.paiCode[k];
-        resList.push(kn);
-      }
-      this.handStack = resList;
+      var plist = PaiMaker.GeneratePai();
+      this.handStack = plist.slice(0,14);
       this.sortPai();
     },
     addPai: function(num,ch){
@@ -303,6 +272,16 @@ export default {
       return "/img/"+code+".png";
     },
     judgeTing: function(){
+      this.$http.post("http://localhost:8282/",
+      qs.stringify({
+        handStack: this.handStack,
+        fuluStack: this.fuluStack,
+        param: this.param
+      }),{
+    headers: {'content-type': 'application/x-www-form-urlencoded'}
+}).then((response)=>{
+        //this.setEventData(response.data);
+      });
       this.normalized = {};
       //统计牌数
       this.paishu = this.countPai();

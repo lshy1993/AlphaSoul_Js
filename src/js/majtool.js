@@ -1,5 +1,53 @@
 /* eslint-disable */ 
+const paiCode = [
+  "1m","2m","3m","4m","5m","6m","7m","8m","9m",
+  "1p","2p","3p","4p","5p","6p","7p","8p","9p",
+  "1s","2s","3s","4s","5s","6s","7s","8s","9s",
+  "1z","2z","3z","4z","5z","6z","7z"
+]
+const paiDisp = [
+  "一","二","三","四","五","六","七","八","九",
+  "①","②","③","④","⑤","⑥","⑦","⑧","⑨",
+  "１","２","３","４","５","６","７","８","９",
+  "東","南","西","北", //场风
+  "白","發","中" //役牌
+]
+
 class PaiMaker {
+  // 生成随机牌山
+  static GeneratePai(){
+    var resArr = [], resList = [];
+    for(var i=0;i<136;i++){
+      resArr.push(i);
+    }
+    for(var i=135;i>0;i--)
+    {
+      var k = Math.floor(Math.random()*i);
+      var temp = resArr[k];
+      resArr[k] = resArr[i];
+      resArr[i] = temp;
+    }
+    // 生成牌
+    for (var i=0;i<136;i++)
+    {
+      var p = resArr[i];
+      var k = p % 34;
+      // 初始宝牌设定
+      var kn = p==4?'0m':p==13?'0p':p==22?'0s':paiCode[k];
+      resList.push(kn);
+    }
+    function cmp(a,b){
+      var tv = {"m":0,"p":1,"s":2,"z":3};
+      a = a.replace('0','5');
+      b = b.replace('0','5');
+      if(a[1] == b[1]){
+        return a[0]-b[0];
+      }
+      return tv[a[1]]-tv[b[1]];
+    }
+    //resList.sort(cmp);
+    return resList;
+  }
   // 统计牌组构成
   static GetCount(plist) {
     var paiCount = {
@@ -131,60 +179,81 @@ class MianziMaker{
   static get_chi_mianzi(pCount,fulu,p) {
       var mianzi = [];
       var s = p[1];
-      var n = p[0] -0 || 5;
+      var n = p[0] - '0' || 5;
       var d = p[2];
       var bingpai = pCount[s];
       var p1, p2;
       // 上家打牌 && 非字牌
-      if (s != 'z' && d == '-') {
-          // n-2 n-1 n
-          if (3 <= n && bingpai[n-2] > 0 && bingpai[n-1] > 0) {
-              p1 = ((n-2 == 5 && bingpai[0] > 0) ? 0 : n-2) + s;
-              p2 = ((n-1 == 5 && bingpai[0] > 0) ? 0 : n-1) + s;
-              if (fulu.length == 3 && bingpai[n] == 1 && 3 < n && bingpai[n-3] == 1)
-                  ;
-              else mianzi.push([p1+"|"+p2+"|"+p,2]);
-          }
-          // n n+1 n+2
-          if (n <= 7 && bingpai[n+1] > 0 && bingpai[n+2] > 0) {
-              p1 = ((n+1 == 5 && bingpai[0] > 0) ? 0 : n+1) + s;
-              p2 = ((n+2 == 5 && bingpai[0] > 0) ? 0 : n+2) + s;
-              if (fulu.length == 3 && bingpai[n] == 1 && n < 7 && bingpai[n+3] == 1)
-                  ;
-              else mianzi.push([p+"|"+p1+"|"+p2,2]);
-          }
-          // n-1 n n+1
-          if (2 <= n &&  n <= 8 && bingpai[n-1] > 0 && bingpai[n+1] > 0) {
-              p1 = ((n-1 == 5 && bingpai[0] > 0) ? 0 : n-1) + s;
-              p2 = ((n+1 == 5 && bingpai[0] > 0) ? 0 : n+1) + s;
-              mianzi.push([p1+"|"+p+"|"+p2,2]);
-          }
+      if (s == 'z' && d != '-') {
+        return mianzi;
+      }
+      // n-2 n-1 n
+      if (3 <= n && bingpai[n-2] > 0 && bingpai[n-1] > 0) {
+        p1 = (n-2) + s;
+        p2 = (n-1) + s;
+        mianzi.push([p1+"|"+p2+"|"+p,2]);
+        if(n-2 == 5 && bingpai[0] > 0){
+          mianzi.push([(0+s)+"|"+p2+"|"+p,2]);
+        }
+        if(n-1 == 5 && bingpai[0] > 0){
+          mianzi.push([p1+"|"+(0+s)+"|"+p,2]);
+        }
+      }
+      // n n+1 n+2
+      if (n <= 7 && bingpai[n+1] > 0 && bingpai[n+2] > 0) {
+        p1 = (n+1) + s;
+        p2 = (n+2) + s;
+        mianzi.push([p+"|"+p1+"|"+p2,2]);
+        if(n+1 == 5 && bingpai[0] > 0){
+          mianzi.push([p+"|"+(0+s)+"|"+p2,2]);
+        }
+        if(n+2 == 5 && bingpai[0] > 0){
+          mianzi.push([p+"|"+p1+"|"+(0+s),2]);
+        }
+      }
+      // n-1 n n+1
+      if (2 <= n &&  n <= 8 && bingpai[n-1] > 0 && bingpai[n+1] > 0) {
+        p1 = (n-1) + s;
+        p2 = (n+1) + s;
+        mianzi.push([p1+"|"+p+"|"+p2,2]);
+        if(n-1 == 5 && bingpai[0] > 0){
+          mianzi.push([(0+s)+"|"+p+"|"+p2,2]);
+        }
+        if(n+1 == 5 && bingpai[0] > 0){
+          mianzi.push([p1+"|"+p+"|"+(0+s),2]);
+        }
       }
       return mianzi;
   }
   // 是否能碰
   static get_peng_mianzi(pCount,fulu,p) {
-      var mianzi = [];
-      var s = p[1];
-      var n = p[0] -0 || '5';
-      var d = p[2];
-      var bingpai = pCount[s];
-
-      if (d != '_' && bingpai[n] >= 2) {
-          var p1 = ((n == 5 && bingpai[0] > 1) ? 0 : n) + s;
-          var p2 = ((n == 5 && bingpai[0] > 0) ? 0 : n) + s;
-          mianzi = [[p1+"|"+p2+"|"+p,3]];
+    var mianzi = [];
+    var s = p[1];
+    var n = p[0] - '0' || 5;
+    var d = p[2];
+    var bingpai = pCount[s];
+    if(d == '_') return mianzi;
+    // n n n
+    if(bingpai[n] >= 2){
+      var p1 = ((n == 5 && bingpai[0] > 0) ? 0 : n) + s;
+      var p2 = ((n == 5 && bingpai[0] > 1) ? 0 : n) + s;
+      mianzi.push([p1+"|"+p2+"|"+p,3]);
+      if(n == 5 && bingpai[0] > 1){
+        mianzi.push([p1+"|"+5+s+"|"+p,3]);
       }
-      return mianzi;
+      if(n == 5 && bingpai[0] > 0){
+        mianzi.push([5+s+"|"+5+s+"|"+p,3]);
+      }
+    }
+    return mianzi;
   }
   // 是否能杠
   static get_gang_mianzi(pCount,fulu,p) {
       var mianzi = [];
       var s = p[1];
-      var n = p[0]-'0' || 5;
+      var n = p[0] - '0' || 5;
       var shoupai = pCount;
       var bingpai = shoupai[s];
-      console.log(s,n);
       // 明杠
       if (bingpai[n] == 3) {
           var p1 = ((n == 5 && bingpai[0] > 2) ? 0 : n)+s;
@@ -220,8 +289,8 @@ class MianziMaker{
   static GetFuluMianzi(handStack,fuluStack,hupai){
     var pCount = PaiMaker.GetCountOff(handStack,hupai);
     var fulumz = this.get_gang_mianzi(pCount,fuluStack,hupai+'-')
-        .concat(this.get_peng_mianzi(pCount,fuluStack,hupai+'-'))
-        .concat(this.get_chi_mianzi(pCount,fuluStack,hupai+'-'));
+      .concat(this.get_peng_mianzi(pCount,fuluStack,hupai+'-'))
+      .concat(this.get_chi_mianzi(pCount,fuluStack,hupai+'-'));
     return fulumz;
   }
 
@@ -661,7 +730,7 @@ class PtJudger {
       defen: 0,
       fenpei: [0, 0, 0, 0]
     };
-    var pre_hupai = this.get_pre_hupai(param.hupai);
+    var pre_hupai = this.get_pre_hupai(param);
     var post_hupai = this.get_post_hupai(
       shoupai.toString(), param.baopai, param.fubaopai);
 

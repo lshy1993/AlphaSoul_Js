@@ -1,21 +1,27 @@
 <template>
 <div>
     <span>在线AI对战测试系统<button @click="reLink">ReLink</button><button @click="newGame">Start</button></span>
-    <div class="centerDiv">
+    <div class="TableDiv">
         <div v-for="pid in 4" :key="pid" :style="getPos(pid)">
             <div v-for="(code,index) in riverStack[pid-1]" :key="index" :class="['PaiDiv']">
                 <img :src="imgUrl(code)" width="40" height="65"/>
             </div>
         </div>
+        <div class="CenterDiv">
+            <div>{{ restyama }}</div>
+            <div v-for="(code,index) in bao" :key="index" :class="['PaiDiv']">
+                <img :src="imgUrl(code)" width="40" height="65"/>
+            </div>
+        </div>
     </div>
-    <div class="playerUI">
+    <div class="PlayerUI">
         <div class="optDiv">
             <button v-if="optFlag.chi" @click="selectOpt(2)">吃</button>
             <button v-if="optFlag.peng" @click="selectOpt(3)">碰</button>
             <button v-if="optFlag.gang" @click="selectOpt(4)">杠</button>
-            <button v-if="optFlag.hu" @click="selectOpt(9)">胡</button>
-            <button v-if="optFlag.zimo" @click="selectOpt(8)">自摸</button>
             <button v-if="optFlag.lizhi" @click="selectOpt(7)">立直</button>
+            <button v-if="optFlag.zimo" @click="selectOpt(8)">自摸</button>
+            <button v-if="optFlag.hu" @click="selectOpt(9)">胡</button>
             <button v-if="optFlag.liuju" @click="selectOpt(10)">流局</button>
             <button v-if="hasOption" @click="cancelOpt">取消</button>
         </div>
@@ -29,6 +35,7 @@
         <div class="handDiv">
             <div v-for="(code,index) in handStack" :key="index" @click="discardPai(index)" :class="['PaiDiv', index==13?'Last':'']">
                 <img :src="imgUrl(code)" width="80" height="129"/>
+                <div :class="['PaiDiv',lizhiMask(index)?'BigMask':'']"></div>
             </div>
         </div>
     </div>
@@ -48,12 +55,14 @@ export default {
             changbang: 0,
             lizhibang: 0,
             score: [0,0,0,0],
+            restyama: 0,
             bao: [],
             handStack: [],
             fuluStack: [[],[],[],[]],
             riverStack: [[],[],[],[]],
-            canDiscard: false,
+            canDiscard: [],
             subOptOn: false,
+            lizhiOn: false,
             optFlag: {},
             combShow: {},
             comb: {}
@@ -66,7 +75,7 @@ export default {
             }
             return false;
             //return this.optFlag.filter((x)=>{return x;}).length > 0;
-        }
+        },
     },
     created(){
         this.reLink();
@@ -105,20 +114,33 @@ export default {
                     // 新摸牌
                     //var gs = e.data;
                     _self.handStack.push(e.tile);
-                    _self.canDiscard = true;
+                    _self.handStack.forEach((element,i) => {
+                        _self.canDiscard[i] = true;
+                    });
+                    _self.restyama = e.restyama;
+
                 }
                 if(e.type == 'ActionDiscardTile'){
+                    _self.restyama = e.restyama;
                     _self.riverStack[e.seat].push(e.tile);
                 }
                 if(e.hasOwnProperty('operation')){
                     _self.changeFlag(e.operation);
+                    if(e.lizhi_state && !_self.hasOption){
+                        setTimeout(() => {
+                            _self.discardPai(gs.tile);
+                        }, 500);
+                    }
                 }
             }
         },
         newGame: function(){
+            this.fuluStack = [[],[],[],[]];
+            this.riverStack = [[],[],[],[]];
+            this.handStack = [];
             this.ws.send(JSON.stringify({type:'newgame'}));
         },
-        changeFlag: function(gs){
+        changeFlag: function(gs,lizhi){
             //1切 2吃 3碰 4暗杠 5明杠 6加杠 7立直 8自摸 9胡 10九种 11拔北
             this.optFlag = {};
             this.comb = gs;
@@ -160,14 +182,15 @@ export default {
             this.handStack.sort(cmp);
         },
         discardPai: function(index){
-            if(!this.canDiscard) return;
+            if(!this.canDiscard[index]) return;
+            this.canDiscard = [];
             let dapai = this.handStack[index];
             this.ws.send(JSON.stringify({
                 type:'qiepai',
                 from: 0,
-                pai: dapai
+                pai: dapai,
+                lizhi: this.lizhiOn
             }));
-            this.canDiscard = false;
             this.handStack.splice(index,1);
             this.sortPai();
         },
@@ -178,27 +201,64 @@ export default {
                 }
                 if(x.type == key) return x.comb;
             });
-            if(tt.length > 1){
-                this.combShow = tt;
-                this.subOptOn = true;
-            }else{
-                this.sendOpt(tt[0]);
+            // console.log(key,tt);
+            if(key <= 4){
+                if(tt.length > 1){
+                    this.combShow = tt;
+                    this.subOptOn = true;
+                }else{
+                    this.sendOpt({
+                        type:'chipenggang',
+                        from: 0,
+                        comb: tt[0]
+                    });
+                }
+            }else if(key == 7){
+                this.selectLizhi(tt[0].comb);
+            }else if(key == 8 || key == 9){
+                this.sendOpt({
+                    type:'huzimo',
+                    from: 0
+                });
+            }else if(key == 10){
+                this.sendOpt({
+                    type:'liuju',
+                    from: 0
+                });
             }
         },
-        sendOpt: function(comb){
-            this.ws.send(JSON.stringify({
-                type:'chipenggang',
-                from: 0,
-                comb: comb
-            }));
+        sendOpt: function(obj){
+            this.ws.send(JSON.stringify(obj));
             this.subOptOn = false;
             // this.combShow = {};
             // this.comb = {};
             this.optFlag = {};
         },
+        selectLizhi: function(tiles){
+            var ss = [];
+            for(var pai of tiles){
+                ss.push(pai.dapai);
+            }
+            console.log(ss);
+            this.handStack.forEach((ele,i) => {
+                this.canDiscard[i] = false;
+                for(var p of ss){
+                    if(ele == p) this.canDiscard[i] = true;
+                }
+            });
+            this.lizhiOn = true;
+        },
+        lizhiMask: function(index){
+            return this.lizhiOn && !this.canDiscard[index];
+        },
         cancelOpt: function(){
             if(this.subOptOn){
                 this.subOptOn = false;
+                return;
+            }
+            if(this.lizhiOn){
+                this.lizhiOn = false;
+                this.canDiscard = [];
                 return;
             }
             this.ws.send(JSON.stringify({
@@ -220,13 +280,27 @@ export default {
 </script>
 
 <style>
-.centerDiv{
+.BigMask{
+    mix-blend-mode: inherit;
+    background:rgba(0, 0, 0, 0.5);
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+.TableDiv{
     position: relative;
     width: 800px;
     height: 800px;
     margin: 0 auto;
 }
-.playerUI{
+.CenterDiv{
+    position: relative;
+    top: 300px;
+    width: 200px;
+    height: 200px;
+    margin: auto;
+}
+.PlayerUI{
     position: fixed;
     bottom: 0;
     width: 100%;
