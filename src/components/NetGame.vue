@@ -99,7 +99,7 @@ export default {
                 console.log(e);
                 if(e.type == 'ActionNewRound'){
                     // 初始起牌
-                    var gs = e.data;
+                    var gs = e;
                     _self.qinjia = gs.qinjia;
                     _self.changfeng = gs.changfeng;
                     _self.zifeng = gs.zifeng;
