@@ -10,11 +10,6 @@ export default new Router({
     {
       path: '/',
       name: 'home',
-      component: ()=> import('../components/HelloWorld.vue')
-    },
-    {
-      path: '/status',
-      name: 'status',
       component: () => import('../components/AlphaSoulStatus.vue')
     },
     {
