@@ -20,7 +20,7 @@ export default new Router({
     {
       path: '/tool',
       name: 'tool',
-      component: () => import('../components/MajMain.vue')
+      component: () => import('../components/MajTool.vue')
     }
   ]
 })

@@ -258,12 +258,12 @@ export default {
     normalize: function(){
       this.normalized = {};
       var min = Infinity,max = 0;
-      for(var res of this.cal_res){
+      for(let res of this.cal_res){
         if(res[3] == -1)continue;
         min = Math.min(min,res[3]);
         max = Math.max(max,res[3]);
       }
-      for(var res of this.cal_res){
+      for(let res of this.cal_res){
         this.normalized[res[0]] =res[3] == -1?0:((res[3]-min)/(max-min)).toFixed(2);
       }
       //if(plist[num] == undefined) return 0;
@@ -273,13 +273,14 @@ export default {
     },
     judgeTing: function(){
       this.$http.post("http://localhost:8282/",
-      qs.stringify({
-        handStack: this.handStack,
-        fuluStack: this.fuluStack,
-        param: this.param
-      }),{
-    headers: {'content-type': 'application/x-www-form-urlencoded'}
-}).then((response)=>{
+        qs.stringify({
+          handStack: this.handStack,
+          fuluStack: this.fuluStack,
+          param: this.param
+        }),{
+        eaders: {'content-type': 'application/x-www-form-urlencoded'}
+      }).then((response)=>{
+        console.log(response);
         //this.setEventData(response.data);
       });
       this.normalized = {};
@@ -321,7 +322,7 @@ export default {
           this.mode = 1;
           this.aiplayer.handStack = this.handStack;
           this.aiplayer.paishu = this.countPai();
-          var dapai = this.aiplayer.FindQie()
+          //var dapai = this.aiplayer.FindQie()
           //console.log("打牌：", dapai);
           this.cal_res = this.aiplayer.cal_res;
           this.normalize();
