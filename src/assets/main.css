@@ -1,3 +1,6 @@
+body{
+  margin: 0;
+}
 .HintBox{
     text-align: left;
     margin: 10px;

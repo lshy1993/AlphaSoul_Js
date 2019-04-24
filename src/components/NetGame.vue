@@ -1,19 +1,70 @@
 <template>
 <div>
-    <span>在线AI对战测试系统<button @click="reLink">ReLink</button><button @click="newGame">Start</button></span>
+    <div class="menuDiv">
+        <h2>在线AI对战测试系统</h2>
+        <button @click="reLink">ReLink</button><button @click="newGame">Start</button>
+    </div>
+    <!-- 宝牌指示 -->
+    <div class="baoDiv">
+        <div v-for="(code,index) in bao" :key="index" :class="['PaiDiv']">
+            <img :src="imgUrl(code)" width="40" height="65"/>
+        </div>
+        <div>场棒：{{ changbang }} 立直棒：{{ lizhibang }}</div>
+    </div>
+    <!-- 牌桌 -->
     <div class="TableDiv">
+        <div v-for="pid in 3" :key="pid" :class="getHandPos(pid)">
+            <div style="display: inline-block; float:left;">
+                aaaaaaaaaaaaaaaaa
+                <div v-for="(code,index) in handStack[pid]" :key="index" :class="['PaiDiv']">
+                    <img :src="imgUrl(code)" width="40" height="65"/>
+                </div>
+            </div>
+            <div style="display: inline-block; float:right;">
+                副露
+            </div>
+        </div>
         <div v-for="pid in 4" :key="pid" :style="getPos(pid)">
             <div v-for="(code,index) in riverStack[pid-1]" :key="index" :class="['PaiDiv']">
                 <img :src="imgUrl(code)" width="40" height="65"/>
             </div>
         </div>
+
         <div class="CenterDiv">
             <div>{{ restyama }}</div>
-            <div v-for="(code,index) in bao" :key="index" :class="['PaiDiv']">
-                <img :src="imgUrl(code)" width="40" height="65"/>
+        </div>
+        <!-- 得分和终局 -->
+        <div v-if="ptres.defen != undefined" class="scoreDiv">
+            <div style="display: inline-block;">
+                <div v-for="(code,index) in handStack" :key="index" :class="['PaiDiv']">
+                    <img :src="imgUrl(code)" width="40" height="65"/>
+                </div>
+                <div>
+
+                </div>
             </div>
+            <div>
+                <div style="display: inline-block;">
+                    <div v-for="(code,index) in bao" :key="index" :class="['PaiDiv']">
+                        <img :src="imgUrl(code)" width="40" height="65"/>
+                    </div>
+                </div>
+                <div style="display: inline-block;">
+                    <div v-for="(code,index) in libao" :key="index" :class="['PaiDiv']">
+                        <img :src="imgUrl(code)" width="40" height="65"/>
+                    </div>
+                </div>
+            </div>
+            <div v-for="(mianzi,index) in ptres.hupai" :key="index">
+                <span>{{ mianzi.name }}</span>
+                <span>{{ mianzi.fanshu }}番</span>
+            </div>
+            <div>{{ ptres.fu  }}符 {{ ptres.fanshu }}番 {{ ptres.defen }}</div>
+            <div>{{ ptres.fenpei }}</div>
+            <button @click="confirmOpt">确认</button>
         </div>
     </div>
+    <!-- 玩家操作UI部分 -->
     <div class="PlayerUI">
         <div class="optDiv">
             <button v-if="optFlag.chi" @click="selectOpt(2)">吃</button>
@@ -39,6 +90,7 @@
             </div>
         </div>
     </div>
+
 </div>
 </template>
 
@@ -57,9 +109,11 @@ export default {
             score: [0,0,0,0],
             restyama: 0,
             bao: [],
+            libao: [],
             handStack: [],
             fuluStack: [[],[],[],[]],
             riverStack: [[],[],[],[]],
+            ptres: {},
             canDiscard: [],
             subOptOn: false,
             lizhiOn: false,
@@ -84,11 +138,11 @@ export default {
         reLink: function(){
             var _self = this;
             this.ws = new WebSocket('ws://localhost:8181');
-            this.ws.onopen = function(e){
+            this.ws.onopen = function(){
                 console.log("连接服务器成功");
                 //ws.send("game1");
             }
-            this.ws.onclose = function(e){
+            this.ws.onclose = function(){
                 console.log("服务器关闭");
             }
             this.ws.onerror = function(){
@@ -96,41 +150,49 @@ export default {
             }
             this.ws.onmessage = function(msg){
                 var e = JSON.parse(msg.data);
-                console.log(e);
-                if(e.type == 'ActionNewRound'){
-                    // 初始起牌
-                    var gs = e;
-                    _self.qinjia = gs.qinjia;
-                    _self.changfeng = gs.changfeng;
-                    _self.zifeng = gs.zifeng;
-                    _self.changbang = gs.changbang;
-                    _self.lizhibang = gs.lizhibang;
-                    _self.score = gs.score;
-                    _self.bao = gs.bao;
-                    _self.handStack = gs.handStack;
-                    _self.sortPai();
-                }
-                if(e.type == 'ActionDealTile'){
-                    // 新摸牌
-                    //var gs = e.data;
-                    _self.handStack.push(e.tile);
-                    _self.handStack.forEach((element,i) => {
-                        _self.canDiscard[i] = true;
-                    });
-                    _self.restyama = e.restyama;
+                _self.decode(e);
+            }
+        },
+        decode: function(e){
+            console.log(e);
+            if(e.type == "ActionHule"){
+                this.ptres = e;
+            }
+            else if(e.type == 'ActionNewRound'){
+                // 初始起牌
+                var gs = e;
+                this.seat = gs.seat;
+                this.qinjia = gs.qinjia;
+                this.changfeng = gs.changfeng;
+                this.zifeng = gs.zifeng;
+                this.changbang = gs.changbang;
+                this.lizhibang = gs.lizhibang;
+                this.score = gs.score;
+                this.bao = gs.bao;
+                this.handStack = gs.handStack;
+                this.sortPai();
+            }
+            else if(e.type == 'ActionDealTile'){
+                // 新摸牌
+                //var gs = e.data;
+                this.handStack.push(e.tile);
+                this.handStack.forEach((element,i) => {
+                    this.canDiscard[i] = true;
+                });
+                this.restyama = e.restyama;
 
-                }
-                if(e.type == 'ActionDiscardTile'){
-                    _self.restyama = e.restyama;
-                    _self.riverStack[e.seat].push(e.tile);
-                }
-                if(e.hasOwnProperty('operation')){
-                    _self.changeFlag(e.operation);
-                    if(e.lizhi_state && !_self.hasOption){
-                        setTimeout(() => {
-                            _self.discardPai(gs.tile);
-                        }, 500);
-                    }
+            }
+            else if(e.type == 'ActionDiscardTile'){
+                this.restyama = e.restyama;
+                this.riverStack[e.seat].push(e.tile);
+            }
+
+            if(e.hasOwnProperty('operation')){
+                this.changeFlag(e.operation);
+                if(e.lizhi_state && !this.hasOption){
+                    setTimeout(() => {
+                        this.discardPai(gs.tile);
+                    }, 500);
                 }
             }
         },
@@ -140,7 +202,7 @@ export default {
             this.handStack = [];
             this.ws.send(JSON.stringify({type:'newgame'}));
         },
-        changeFlag: function(gs,lizhi){
+        changeFlag: function(gs){
             //1切 2吃 3碰 4暗杠 5明杠 6加杠 7立直 8自摸 9胡 10九种 11拔北
             this.optFlag = {};
             this.comb = gs;
@@ -187,8 +249,8 @@ export default {
             let dapai = this.handStack[index];
             this.ws.send(JSON.stringify({
                 type:'qiepai',
-                from: 0,
-                pai: dapai,
+                from: this.seat,
+                tile: dapai,
                 lizhi: this.lizhiOn
             }));
             this.handStack.splice(index,1);
@@ -197,9 +259,9 @@ export default {
         selectOpt: function(key){
             let tt = this.comb.filter((x)=>{
                 if(key == 4){
-                    if(x.type in [4,5,6]) return x.comb;
+                    if(x.type in [4,5,6]) return x.combination;
                 }
-                if(x.type == key) return x.comb;
+                if(x.type == key) return x.combination;
             });
             // console.log(key,tt);
             if(key <= 4){
@@ -208,22 +270,22 @@ export default {
                     this.subOptOn = true;
                 }else{
                     this.sendOpt({
-                        type:'chipenggang',
-                        from: 0,
-                        comb: tt[0]
+                        type: 'chipenggang',
+                        from: this.seat,
+                        combination: tt[0]
                     });
                 }
             }else if(key == 7){
-                this.selectLizhi(tt[0].comb);
+                this.selectLizhi(tt[0].combination);
             }else if(key == 8 || key == 9){
                 this.sendOpt({
-                    type:'huzimo',
-                    from: 0
+                    type: 'huzimo',
+                    from: this.seat
                 });
             }else if(key == 10){
                 this.sendOpt({
-                    type:'liuju',
-                    from: 0
+                    type: 'liuju',
+                    from: this.seat
                 });
             }
         },
@@ -263,17 +325,30 @@ export default {
             }
             this.ws.send(JSON.stringify({
                 type:'cancel',
-                from: 0
+                from: this.seat
             }));
             this.optFlag = {};
+        },
+        confirmOpt: function(){
+            this.ptres = {};
+            this.fuluStack = [[],[],[],[]];
+            this.riverStack = [[],[],[],[]];
+            this.handStack = [];
+            this.ws.send(JSON.stringify({
+                type:'confirm',
+                from: this.seat
+            }))
         },
         imgUrl: function(code){
             return "/img/"+code+".png";
         },
         getPos: function(pid){
-            var str = 'transform:rotate('+-90*(pid-1)+'deg);width:240px;position:absolute;';
-            var pos = ['top: 500px;left:300px;','bottom: 300px;left:600px;','bottom:500px;right:300px;','right:600px;bottom: 300px;'][pid-1];
+            var str = 'transform:rotate('+-90*(pid-1)+'deg); width:240px; position:absolute; text-align:left;';
+            var pos = ['top: 550px;left:280px;','bottom: 340px;left:440px;','bottom:500px;right:280px;','right:440px;top: 390px;'][pid-1];
             return str+pos;
+        },
+        getHandPos: function(pid){
+            return ["rightHand","topHand","leftHand"][pid-1];
         }
     },
 }
@@ -287,22 +362,68 @@ export default {
     top: 0;
     left: 0;
 }
+.menuDiv{
+    position: fixed;
+    top: 30px;
+    left: 50px;
+}
+.baoDiv {
+    position: fixed;
+    top: 150px;
+    left: 50px;
+    width: 200px;
+    height: 95px;
+    background: rgba(0,0,0,0.2);
+    text-align: left;
+    padding: 10px;
+}
 .TableDiv{
     position: relative;
     width: 800px;
     height: 800px;
     margin: 0 auto;
+    background: rgba(0,51,102,0.7);
+}
+.rightHand{
+    position: absolute;
+    height: 65px;
+    width: 650px;
+    transform-origin: 0 0;
+    transform: translate(735px, 650px) rotate(-90deg);
+}
+.topHand{
+    position: absolute;
+    height: 65px;
+    width: 650px;
+    transform-origin: 0 0;
+    transform: translate(650px, 65px) rotate(-180deg);
+}
+.leftHand{
+    position: absolute;
+    height: 65px;
+    width: 650px;
+    transform-origin: 0 0;
+    transform: translate(65px, 150px) rotate(-270deg);
 }
 .CenterDiv{
     position: relative;
     top: 300px;
-    width: 200px;
-    height: 200px;
+    width: 250px;
+    height: 250px;
     margin: auto;
+    background: rgba(0,0,0,0.5);
+}
+.scoreDiv{
+    position: relative;
+    width: 800px;
+    height: 400px;
+    margin: auto;
+    color: white;
+    background: rgba(0,0,0,0.5);
 }
 .PlayerUI{
     position: fixed;
-    bottom: 0;
+    bottom: 0px;
     width: 100%;
 }
 .handDiv{
