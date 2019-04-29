@@ -1,0 +1,51 @@
+#majtool{
+    .HintBox{
+        text-align: left;
+        margin: 10px;
+    }
+    .BoxHead{
+        text-align: center;
+        padding: 5px;
+        margin-bottom: 5px; 
+    }
+    .PaiSelector{
+        z-index: 1001;
+        position:fixed;
+        right:0;
+        bottom:0;
+        background:white;
+    }
+    img{
+        -webkit-user-select: none;
+    }
+    table {
+        text-align: center;
+        border-collapse: collapse;
+    }
+    td {
+        border: 1px solid gray; 
+    }
+    .PaiList{
+        text-align: left;
+    }
+    .PaiDiv {
+        position: relative;
+        display: inline-block;
+    }
+    .BigMask {
+        width: 80px;
+        height: 129.5px;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+    .Last{
+        margin-left: 30px;
+    }
+    .Good{
+        background: #9FF048;
+    }
+    .Bad{
+        background: #E03636;
+    }
+}

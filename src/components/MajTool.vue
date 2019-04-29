@@ -1,5 +1,5 @@
 <template>
-  <div class="hello">
+  <div id="majtool">
     <h1>科学麻将算法解析</h1>
     <div>
       <div style="display:inline-block;">
@@ -157,7 +157,7 @@
 </template>
 
 <script>
-import { PaiMaker,TingJudger, PtJudger, RonJudger,MianziMaker } from '../js/majtool.js';
+import { PaiMaker, TingJudger, PtJudger, RonJudger, MianziMaker } from '../js/majtool.js';
 import { AI_Core } from '../js/ai_core.js';
 import qs from 'qs';
 
@@ -206,7 +206,7 @@ export default {
     }
   },
   created(){
-    this.aiplayer = new AI_Core();
+    this.aiplayer = new AI_Core(-1,false);
   },
   computed:{
     resShow: function(){
@@ -225,7 +225,7 @@ export default {
       this.sortPai();
     },
     addPai: function(num,ch){
-      console.log(ch,num);
+      // console.log(ch,num);
       if(this.handStack.length<14 && this.paishu[ch][num]>0){
         this.handStack.push(num+ch);
       }
@@ -272,17 +272,17 @@ export default {
       return "/img/"+code+".png";
     },
     judgeTing: function(){
-      this.$http.post("http://localhost:8282/",
-        qs.stringify({
-          handStack: this.handStack,
-          fuluStack: this.fuluStack,
-          param: this.param
-        }),{
-        eaders: {'content-type': 'application/x-www-form-urlencoded'}
-      }).then((response)=>{
-        console.log(response);
-        //this.setEventData(response.data);
-      });
+      // this.$http.post("http://localhost:8282/",
+      //   qs.stringify({
+      //     handStack: this.handStack,
+      //     fuluStack: this.fuluStack,
+      //     param: this.param
+      //   }),{
+      //   eaders: {'content-type': 'application/x-www-form-urlencoded'}
+      // }).then((response)=>{
+      //   console.log(response);
+      //   //this.setEventData(response.data);
+      // });
       this.normalized = {};
       //统计牌数
       this.paishu = this.countPai();
@@ -313,6 +313,7 @@ export default {
         }
         this.ting_res = tingRes;
       }else if(this.handStack.length == 14){
+        console.log('asss');
         this.n_xiangting =  this.aiplayer.fulu_xiangting(this.handStack,this.fuluStack);
         var hupai = this.handStack[this.handStack.length-1];
         if(this.n_xiangting == -1){
@@ -322,8 +323,7 @@ export default {
           this.mode = 1;
           this.aiplayer.handStack = this.handStack;
           this.aiplayer.paishu = this.countPai();
-          //var dapai = this.aiplayer.FindQie()
-          //console.log("打牌：", dapai);
+          this.aiplayer.FindQie();
           this.cal_res = this.aiplayer.cal_res;
           this.normalize();
         }
@@ -358,64 +358,6 @@ export default {
 }
 </script>
 
-<style>
-.HintBox{
-  text-align: left;
-  margin: 10px;
-}
-.BoxHead{
-  text-align: center;
-  padding: 5px;
-  margin-bottom: 5px; 
-}
-.PaiSelector{
-  z-index: 1001;
-  position:fixed;
-  right:0;
-  bottom:0;
-  background:white;
-}
-img{
-  -webkit-user-select: none;
-}
-table {
-  text-align: center;
-  border-collapse: collapse;
-}
-td {
-  border: 1px solid gray; 
-}
-.PaiList{
-  text-align: left;
-}
-.PaiDiv {
-  position: relative;
-  display: inline-block;
-}
-.BigMask {
-  width: 80px;
-  height: 129.5px;
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-.Last{
-  margin-left: 30px;
-}
-.Good{
-  background: #9FF048;
-}
-.Bad{
-  background: #E03636;
-}
-.fade-enter-active, .fade-leave-active {
-  /*transition: opacity .5s;*/
-  transition: height 0.5s;
-}
-.fade-enter-to, .fade-leave /* .fade-leave-active below version 2.1.8 */ {
-  height: 276px;
-}
-.fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
-  height: 0;
-}
+<style lang="scss">
+
 </style>

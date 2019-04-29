@@ -21,6 +21,11 @@ export default new Router({
       path: '/tool',
       name: 'tool',
       component: () => import('../components/MajTool.vue')
+    },
+    {
+      path: '/test',
+      name: 'test',
+      component: () => import('../components/MajCanvas.vue')
     }
   ]
 })
