@@ -4,18 +4,19 @@
         <link v-for="(pic,index) in preloadImgList()" :key="'pi'+index" rel="preload" :href="pic" as="image" />
         <link v-for="(file,index) in preloadVoiceList()" :key="'au'+index" rel="preload" :href="file" as="audio" />
     </div>
+    <announce-news />
     <div id="game">
         <!--audio ref="mainAudio"></audio-->
-        <div class="menuDiv">
+        <div :class="['BoardDiv','Menu']">
+            <span>本页面程序仅供学习使用，素材均来自于雀魂游戏</span>
             <h2>AlphaSoul对战系统</h2>
-            <h4>v0.0.2</h4>
+            <h4>v0.0.3</h4>
             <button v-if="!serverConnected" @click="reLink">ReLink</button>
             <button v-if="serverConnected" @click="newGame">NewGame</button>
             <h4>{{ wsMsg }}</h4>
-            <span>本页面程序仅供学习使用，素材均来自于雀魂游戏</span>
         </div>
         <!-- 宝牌指示 -->
-        <div class="baoDiv">
+        <div class="BaoDiv">
             <div v-for="index in 5" :key="index" :class="[index<=bao.length?'PaiDivS':'PaiMask']">
                 <img v-if="index<=bao.length" :src="imgUrl(bao[index-1])" />
             </div>
@@ -28,7 +29,7 @@
                 <div class="iconImg">
                     <img :src="headUrl(chara-1)" width="100" height="100" />
                 </div>
-                <div class="nameTxt">{{ ['玩家','AlphaSoul科学','AlphaSoul昭和','AlphaSoul玄学'][chara-1] }}</div>
+                <div style="color:white;">{{ ['玩家','AlphaSoul科学','AlphaSoul昭和','AlphaSoul玄学'][chara-1] }}</div>
             </div>
             <!-- 手牌与副露 -->
             <div v-for="pid_h in 3" :key="'hs'+pid_h" :class="['HandDiv',['right','top','left'][pid_h-1]]">
@@ -65,14 +66,17 @@
                     </div>
                 </div>
                 <div class="InfoPanel">
-                    <h1>{{ ['东','南','西','北'][changfeng]+['一','二','三','四'][qinjia]+'局' }}</h1>
+                    <h2>{{ ['东','南','西','北'][changfeng]+['一','二','三','四'][qinjia]+'局' }}</h2>
                     <div>剩余牌山：{{ restyama }}</div>
+                    <div>场棒：{{ changbang }}</div>
+                    <div>立直棒：{{ lizhibang }}</div>
+                    <div>宝牌：{{ bao }}</div>
                 </div>
             </div>
         </div>
         <!-- 得分和终局 -->
         <div class="ResultWrap">
-            <div v-if="humsg.hand != undefined && !scoreChangeOn" class="ResultDiv">
+            <div v-if="humsg.hand != undefined && !scoreChangeOn" class="BlackDiv ResultDiv">
                 <div>
                     <div v-for="(hcode,hindex) in humsg.hand" :key="'h'+hindex" :class="['PaiDivS',hcode.length==3?'LastS':'']">
                         <img :src="imgUrl(hcode.substr(0,2))" />
@@ -97,18 +101,20 @@
                         </div>
                     </div>
                 </div>
-                <div style="margin-top: 20px;">
+                <div style="margin-top: 20px;display:block;">
                     <div v-for="(mianzi,index) in humsg.ptres.hupai" :key="index" :class="['FanMing',index>=fanPos?'hide':'']">
-                        <span>{{ mianzi.name }}</span>
-                        <span style="float:right;">{{ mianzi.fanshu }}番</span>
+                        <div :class="[mianzi.fanshu=='*'?'big':'']">{{ mianzi.name }}</div>
+                        <div v-if="mianzi.fanshu!='*'">{{ mianzi.fanshu }}番</div>
                     </div>
                 </div>
                 <div :class="[fanPos<voiceList.length?'hide':'']" >
-                    <h2>{{ humsg.ptres.fu  }}符 {{ humsg.ptres.fanshu }}番 {{ humsg.ptres.defen }}</h2>
+                    <h2 v-if="humsg.ptres.fanshu!=0">{{ humsg.ptres.fu  }}符 {{ humsg.ptres.fanshu }}番</h2>
+                    <h2 v-if="0&&humsg.ptres.fanshu==0">{{ ['','两倍','三倍','四倍','五倍','六倍'][humsg.ptres.damanguan-1]+'役满' }}</h2>
+                    <h1>{{ getFinalTxt(humsg.ptres)+'   '+humsg.ptres.defen }}</h1>
                 </div>
                 <button style="width:80px;height:40px;" @click="confirmOpt(humsg.ptres.fenpei)">确认</button>
             </div>
-            <div v-if="liumsg.opt != undefined && !scoreChangeOn" class="ResultDiv">
+            <div v-if="liumsg.opt != undefined && !scoreChangeOn" class="BlackDiv  ResultDiv">
                 <div>{{ ['四风连打','四家立直','荒牌流局','四杠散了'][liumsg.opt] }}</div>
                 <div style="height:260px; margin-bottom:20px;" v-if="liumsg.opt == 2">
                     <div v-for="tid in 4" :key="'ting'+tid" :class="['hintDiv',['bottom','right','top','left'][tid-1]]">
@@ -119,7 +125,7 @@
                 </div>
                 <button style="width:80px;height:40px;" @click="confirmOpt(liumsg.fenpei)">确认</button>
             </div>
-            <div class="ScoreChangeDiv" v-if="scoreChangeOn">
+            <div class="BlackDiv ScoreChangeDiv" v-if="scoreChangeOn">
                 <div style="height:260px; margin-bottom:20px;">
                     <div v-for="sid in 4" :key="'fen'+sid" :class="['ScoreDiv',['bottom','right','top','left'][sid-1]]">
                         <div class="ScoreTxt">{{ tweenedScore[sid-1] }}</div>
@@ -127,6 +133,21 @@
                     </div>
                 </div>
                 <button style="width:80px;height:40px;" @click="confirmOpt">确认</button>
+            </div>
+            <div class="BlackDiv GameEndDiv" v-if="endGameOn">
+                <div style="margin-bottom:20px;">
+                    <div v-for="sid in sortScore()" :key="'pt'+sid" :class="['FinalDiv']">
+                        <div class="iconImg">
+                            <img :src="headUrl(sid)" width="100" height="100" />
+                        </div>
+                        <div class="CharaDiv">
+                            <div class="NameTxt">{{ ['玩家','AlphaSoul科学','AlphaSoul昭和','AlphaSoul玄学'][sid] }}</div>
+                            <div class="ScoreTxt">{{ score[sid] }}</div>
+                            <div :class="['PtTxt',score[sid]<30000?'negative':'positive']">{{ Math.ceil((score[sid]-30000)/1000) }}</div>
+                        </div>
+                    </div>
+                </div>
+                <button style="width:80px;height:40px;" @click="newGame">NewGame</button>
             </div>
         </div>
         <!-- 玩家操作UI部分 -->
@@ -181,6 +202,7 @@
 </template>
 
 <script>
+import AnnounceNews from './AnnounceNews.vue';
 import FanTool from '../js/fan.js';
 import { Howl, Howler } from 'howler';
 var TWEEN = require('@tweenjs/tween.js');
@@ -211,7 +233,10 @@ export default {
             playerLizhi: [false,false,false,false],
             playerLizhiPai: [false,false,false,false], 
             humsg: {},
+            huList: [],
+            huPos: 0,
             liumsg: {},
+            lizhi_state: false,
             fanPos: 0,
             curWind: 0,
             canDiscard: [],
@@ -219,7 +244,7 @@ export default {
             lizhiOn: false,
             hintOn: false,
             scoreChangeOn: false,
-            lizhi_state: false,
+            endGameOn: false,
             lizhi_tile: '',
             txtMsg: ['','','',''],
             tingPai: [],
@@ -234,11 +259,10 @@ export default {
     computed: {
         hasOption: function(){
             for (var n in this.optFlag) {
-                if(n == 'qie') continue;
+                if(!this.optFlag[n] || n == 'qie') continue;
                 return true;
             }
             return false;
-            //return this.optFlag.filter((x)=>{return x;}).length > 0;
         },
     },
     watch: {
@@ -329,8 +353,10 @@ export default {
             this.liumsg = {};
             this.bao = [];
             this.lizhiOn = false;
+            this.optFlag = {};
             this.subOptOn = false;
             this.scoreChangeOn = false;
+            this.endGameOn = false;
             this.fuluStack = [[],[],[],[]];
             this.riverStack = [[],[],[],[]];
             this.handStack = [[],[],[],[]];
@@ -338,34 +364,60 @@ export default {
             this.playerLizhi = [false,false,false,false];
             this.playerLizhiPai = [false,false,false,false];
         },
-        playHuEnded(e){
-            var _self = this;
-            this.txtMsg[e.seat] = '';
-            this.handStack[e.seat] = e.hand;
-            this.sortPai(e.seat);
-            this.fanPos = 0;
-            this.humsg = e;
+        playHuEnded(){
+            this.humsg = this.huList[this.huPos];
+            let pid = this.humsg.seat;
+            this.txtMsg[pid] = '';
+            this.handStack[pid] = this.humsg.hand;
+            this.sortPai(pid);
             
+            // 生成报菜名表
+            this.voiceList = FanTool.getVoiceList(this.humsg.ptres);
+            console.log(this.voiceList);
+
+            var _self = this;
             let task = [];
             for(var ii in this.voiceList){
-                let file = '/audio/'+this.charaName[e.seat]+'/'+this.voiceList[ii];
+                let file = '/audio/'+this.charaName[pid]+'/'+this.voiceList[ii];
                 let tk = callback => {
                     var sound = new Howl({
                         src: file,
-                        autoplay: true,
-                        onend: function(){
-                            
-                            callback(null,file);
-                        }
+                        autoplay: true
+                    });
+                    sound.on('end',function(){
+                        console.log(file);
+                        callback(null,file);
                     });
                     _self.fanPos++;
                 }
                 task.push(tk);
             }
+            this.fanPos = 0;
             async.series(task,(err,results)=>{
                 if(err) console.log(err);
-                console.log(results);
+                console.log('voice play all done!');
             });
+        },
+        playGangEnded(e){
+            let pid = e.seat;
+            this.txtMsg[pid] = '';
+            for(let ii in e.tiles){
+                var p = e.tiles[ii];
+                var from = e.from[ii];
+                if(from != this.seat){
+                    // 其他人副露
+                    this.handStack[from].splice(0,1);
+                    continue;
+                }else{
+                    let index = this.handStack[from].indexOf(p);
+                    if(index == -1){
+                        console.log('副露牌错误',p);
+                    }else{
+                        this.handStack[from].splice(index,1);
+                    }
+                }
+            }
+            this.fuluStack[pid].push(e.tiles.join('|'));
         },
         playFuluEnded(e){
             let pid = e.seat;
@@ -403,20 +455,18 @@ export default {
             if(e.type == "ActionHule"){
                 var _self = this;
                 // TODO: 多人胡牌的情况
+                this.huList = e.data;
+                this.huPos = 0;
                 for(var submsg of e.data){
                     this.txtMsg[submsg.seat] = submsg.opt==9?'胡':'自摸';
-                    // 生成报菜名表
-                    this.voiceList = FanTool.getVoiceList(submsg.ptres);
-
                     var sound = new Howl({
                         src: '/audio/'+this.charaName[submsg.seat]+'/'+(submsg.opt==9?'act_ron.mp3':'act_tumo.mp3'),
-                        autoplay: true,
-                        onend: function(){
-                            _self.playHuEnded(submsg);
-                        }
+                        autoplay: true
+                    });
+                    sound.once('end',function(){
+                        _self.playHuEnded();
                     });
                 }
-
             }
             else if(e.type == 'ActionNewRound'){
                 this.resetParam();
@@ -453,16 +503,20 @@ export default {
                 if(this.seat != e.seat){
                     this.handStack[e.seat].splice(e.tilepos,1);
                 }
+                if('doras' in e){
+                    // 翻开宝牌
+                    this.bao = this.bao.concat(e.doras);
+                }
                 var tile = e.tile;
                 if(e.is_liqi || e.is_wliqi){
                     this.txtMsg[e.seat] = '立直';
                     this.playerLizhi[e.seat] = true;
                     tile += '*';
-                    var sound = new Howl({
+                    let sound = new Howl({
                         src: '/audio/'+this.charaName[e.seat]+'/'+(e.is_liqi?'act_rich.mp3':'act_drich.mp3'),
                         autoplay: true,
                         onend: function() {
-                            console.log('Finished!');
+                            // console.log('Finished!');
                             _self.playLizhiEnded(e);
                         }
                     });
@@ -472,33 +526,52 @@ export default {
             else if(e.type == 'ActionChiPengGang'){
                 var _self = this;
                 // 将牌从手牌中剔除，加入副露中
+                this.txtMsg[pid] = ['吃','碰','杠'][e.opt-2];
                 let pid = e.seat;
-                // TODO: 语音播放与消除动画
                 var sound = new Howl({
                     src: '/audio/'+this.charaName[pid]+'/'+['act_chi.mp3','act_pon.mp3','act_kan.mp3'][e.opt-2],
                     autoplay: true,
                     onend: function() {
-                        console.log('Finished!');
-                        _self.txtMsg[pid] = ['吃','碰','杠'][e.opt-2];
+                        // console.log('Finished!');
                         _self.playFuluEnded(e);
                     }
                 });
-
-            }else if(e.type == 'ActionLiuJu'){
+            }
+            else if(e.type == 'ActionAnGangAddGang'){
+                var _self = this;
+                this.txtMsg[pid] = '杠';
+                // 将牌从手牌中剔除，加入副露中
+                let pid = e.seat;
+                var sound = new Howl({
+                    src: '/audio/'+this.charaName[pid]+'/act_kan.mp3',
+                    autoplay: true,
+                    onend: function() {
+                        // console.log('Finished!');
+                        _self.playGangEnded(e);
+                    }
+                });
+            }
+            else if(e.type == 'ActionLiuJu'){
                 // 流局
                 this.liumsg = e;
                 if(e.opt == 2){
                     for(let ii in e.tingPai){
                         // 听牌的人展示手牌
-                        if(e.xiangting[ii]){
+                        if(e.xiangting[ii] == 0){
                             this.handStack[ii] = e.hand[ii];
                             this.sortPai(ii);
                             this.tingPai[ii] = e.tingpai;
                             // this.fuluStack[ii] = e.fulu[ii];
                         }
                     }
+                    // this.fenpei = e.fenpei;
+                }else{
+                    // this.fenpei = [0,0,0,0];
                 }
+                
                 // 九种展示手牌
+            }else if(e.type == 'ActionEndGame'){
+                this.endGameOn = true;
             }
 
             if(e.hasOwnProperty('operation')){
@@ -560,18 +633,6 @@ export default {
                 }
             }
         },
-        sortPai: function(seat){
-            function cmp(a,b){
-                var tv = {"m":0,"p":1,"s":2,"z":3};
-                a = a.replace('0','5');
-                b = b.replace('0','5');
-                if(a[1] == b[1]){
-                    return a[0]-b[0];
-                }
-                return tv[a[1]]-tv[b[1]];
-            }
-            this.handStack[seat].sort(cmp);
-        },
         handFlip: function(){
             var hand = [];
             var repeat = {};
@@ -608,12 +669,10 @@ export default {
         },
         selectOpt: function(key){
             let tt = this.comb.filter((x)=>{
-                if(key == 4){
-                    if(x.type in [4,5,6]) return x.combination;
-                }
                 if(x.type == key) return x.combination;
+                if(key == 4 && (x.type == 5 || x.type == 6)) return x.combination;
             });
-            console.log(key,tt);
+            // console.log('filter: ',tt);
             if(tt.length > 1){
                 // 2种以上可能 显示sub
                 this.combShow = tt;
@@ -629,9 +688,17 @@ export default {
             }
         },
         sendOpt: function(obj){
-            if(obj.type <= 4){
+            //1切 2吃 3碰 4暗杠 5明杠 6加杠 7立直 8自摸 9胡 10九种 11拔北
+            console.log(obj);
+            if(obj.type < 4 || obj.type == 5){
                 this.ws.send(JSON.stringify({
                     type: 'chipenggang',
+                    from: parseInt(this.seat),
+                    combination: [obj.combination, obj.type]
+                }));
+            }else if(obj.type == 4 || obj.type == 6){
+                this.ws.send(JSON.stringify({
+                    type: 'angangjiagang',
                     from: parseInt(this.seat),
                     combination: [obj.combination, obj.type]
                 }));
@@ -689,11 +756,13 @@ export default {
             return [];
         },
         cancelOpt: function(){
+            // 有子选项关闭子
             if(this.subOptOn){
                 this.subOptOn = false;
                 this.changeFlag(this.comb);
                 return;
             }
+            // 立直撤销
             if(this.lizhiOn){
                 this.lizhiOn = false;
                 this.canDiscard = [];
@@ -712,21 +781,34 @@ export default {
                 this.sortPai(this.seat);
                 return;
             }
-            this.ws.send(JSON.stringify({
-                type:'cancel',
-                from: this.seat
-            }));
-            this.optFlag = {};
+            // 暗杠立直自摸取消
+            if(this.optFlag.hasOwnProperty('qie')){
+                this.optFlag = { qie: true, lizhi: false };
+            }else{
+                this.ws.send(JSON.stringify({
+                    type:'cancel',
+                    from: this.seat
+                }));
+                this.optFlag = {};
+            }
+
         },
         confirmOpt: function(fp){
+            this.huPos++;
+            if(this.huPos < this.huList.length){
+                this.playHuEnded();
+                return;
+            }
             if(!this.scoreChangeOn){
                 this.scoreChangeOn = true;
                 this.tweenedScore = this.score;
                 this.tweenedFenpei = fp;
                 setTimeout(() => {
                     var fi = [0,0,0,0];
-                    for(var i in this.humsg.ptres.fenpei){
-                        fi[i] = this.score[i] + fp[i];
+                    for(var msg of this.huList){
+                        for(var i in msg.ptres.fenpei){
+                            fi[i] = this.score[i] + fp[i];
+                        }
                     }
                     this.score = fi;
                     this.fenpei = [0,0,0,0];
@@ -762,21 +844,77 @@ export default {
             }
             return imglist;
         },
+        getFinalTxt: function(ptres){
+            if(ptres.fanshu==0) return ['','两倍','三倍','四倍','五倍','六倍'][ptres.damanguan-1]+'役满';
+            else if (ptres.fanshu >= 13) return '累计役满';
+            else if (ptres.fanshu >= 11) return '三倍满';
+            else if (ptres.fanshu >= 8) return '倍满';
+            else if (ptres.fanshu >= 6) return '跳满';
+            else if (ptres.fanshu > 4 || ptres.fanshu == 4 && ptres.fu >= 40 || ptres.fanshu == 3 && ptres.fu >= 70){
+                return '满贯';
+            }
+            return '';
+        },
+        sortPai: function(seat){
+            function cmp(a,b){
+                var tv = {"m":0,"p":1,"s":2,"z":3};
+                a = a.replace('0','5');
+                b = b.replace('0','5');
+                if(a.length != b.length){
+                    return a.length-b.length;
+                }
+                if(a[1] == b[1]){
+                    return a[0]-b[0];
+                }
+                return tv[a[1]]-tv[b[1]];
+            }
+            this.handStack[seat].sort(cmp);
+        },
         sortFulu: function(code){
             var strList = code.split('|');
             function cmps(a,b){
                 if(a.length == b.length){
                     return a[0]-b[0];
                 }
-                if(a[2]=='-') return -1;
-                if(a[2]=='=') return 0;
-                if(a[2]=='+') return 1;
                 return b.length-a.length;
             }
             strList.sort(cmps);
+            let pf = strList[0]
+            if(pf.length == 3){
+                if(pf[2]=='-');
+                else if(pf[2] == '='){
+                    let temp = strList[1];
+                    strList[1] = strList[0];
+                    strList[0] = temp;
+                }
+                else if(pf[2]=='+'){
+                    let temp = strList.shift();
+                    strList.push(temp);
+                }
+            }
             return strList;
         },
+        sortScore: function(){
+            var plist = [];
+            for(var ss in this.score){
+                plist.push({
+                    id: ss,
+                    score: this.score[ss],
+                    wind: ss
+                });
+            }
+            plist.sort((a,b)=>{
+                if(a.score == b.score){
+                    return a.wind - b.wind;
+                }
+                return a.score - b.score;
+            })
+            return plist.map((x)=>{return x.id});
+        }
     },
+    components:{
+        AnnounceNews
+    }
 }
 </script>
 
@@ -797,6 +935,6 @@ export default {
 }
 .flip-list-leave-active {
     // position: fixed; //absolute;
-    transition: all .3s;
+    transition: all .2s;
 }
 </style>

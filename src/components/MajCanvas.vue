@@ -15,6 +15,11 @@ export default {
             tweenedNumber: 0
         }
     },
+    methods: {
+        foo: function(){
+            console.log('foo');
+        }
+    },
     computed: {
         animatedNumber: function() {
             return this.tweenedNumber.toFixed(0);

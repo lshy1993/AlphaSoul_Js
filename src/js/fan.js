@@ -132,7 +132,7 @@ const fan_voice = {
 '两立直':'fan_drich.mp3',
 '门前清自摸和': 'fan_tumo.mp3',
 '一发':'fan_yifa.mp3',
-'天胡':'fan_tianhu.mp3',
+'天和':'fan_tianhu.mp3',
 '地和':'fan_dihu.mp3',
 '大三元':'fan_dasanyuan.mp3',
 '四暗刻':'fan_sianke.mp3',
@@ -169,35 +169,39 @@ function getVoiceList(ptres){
         // 单风
         if(fan.name.indexOf('门风牌') != -1){
             if(fan.name.indexOf('东') != -1){
+                musicList.push(ct[0]>0?'fan_doubledong.mp3':'fan_dong.mp3');
                 ct[0]++;
-                musicList.push('fan_dong.mp3');
             }
             if(fan.name.indexOf('南') != -1){
+                musicList.push(ct[1]>0?'fan_doublenan.mp3':'fan_nan.mp3');
                 ct[1]++;
-                musicList.push('fan_nan.mp3');
             }
             if(fan.name.indexOf('西') != -1){
+                musicList.push(ct[2]>0?'fan_doublexi.mp3':'fan_xi.mp3');
                 ct[2]++;
-                musicList.push('fan_xi.mp3');
             }
             if(fan.name.indexOf('北') != -1){
+                musicList.push(ct[3]>0?'fan_doublebei.mp3':'fan_bei.mp3');
                 ct[3]++;
-                musicList.push('fan_bei.mp3');
             }
         }
         // 连风
         if(fan.name.indexOf('场风牌') != -1){
             if(fan.name.indexOf('东') != -1){
                 musicList.push(ct[0]>0?'fan_doubledong.mp3':'fan_dong.mp3');
+                ct[0]++;
             }
             if(fan.name.indexOf('南') != -1){
                 musicList.push(ct[1]>0?'fan_doublenan.mp3':'fan_nan.mp3');
+                ct[1]++;
             }
             if(fan.name.indexOf('西') != -1){
                 musicList.push(ct[2]>0?'fan_doublexi.mp3':'fan_xi.mp3');
+                ct[2]++;
             }
             if(fan.name.indexOf('北') != -1){
                 musicList.push(ct[3]>0?'fan_doublebei.mp3':'fan_bei.mp3');
+                ct[3]++;
             }
         }
     }

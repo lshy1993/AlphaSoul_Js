@@ -11,6 +11,7 @@ Vue.config.productionTip = false;
 import './assets/main.css';
 import './assets/tool.scss';
 import './assets/game.scss';
+import './assets/app.scss';
 
 new Vue({
   router,

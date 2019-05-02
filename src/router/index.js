@@ -18,6 +18,11 @@ export default new Router({
       component: () => import('../components/NetGame.vue')
     },
     {
+      path: '/auto',
+      name: 'auto',
+      component: () => import('../components/NetWatcher.vue')
+    },
+    {
       path: '/tool',
       name: 'tool',
       component: () => import('../components/MajTool.vue')
