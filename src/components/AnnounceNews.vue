@@ -1,6 +1,14 @@
 <template>
-<div :class="['BoardDiv','News']">
+<div id="News" class="BorderDiv">
     <div style="font-weight:bold;">最近公告</div>
+    <div class="message">
+        <span class="tag fixed">修复</span>
+        <span class="content">修复了4面1雀头的立直问题</span>
+    </div>
+    <div class="message">
+        <span class="tag fixed">修复</span>
+        <span class="content">修复了暗杠的服务器崩溃问题</span>
+    </div>
     <div class="message">
         <span class="tag fixed">修复</span>
         <span class="content">修复了荒牌流局的得分为0的错误</span>

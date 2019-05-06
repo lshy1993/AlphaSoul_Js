@@ -1,47 +1,49 @@
 
-.BoardDiv{
+.BorderDiv{
     border: 1px solid black;
-    position: absolute;
-    width: 250px;
-    z-index: 1020;
+    z-index: 1001;
     padding: 10px;
+}
+
+#Menu {
+    position: absolute;
+    top: 20px;
     left: 20px;
+    width: 250px;
+}
 
-    &.Menu {
-        top: 50px;
+#News {
+    position: relative;
+    left: 20px;
+    width: 300px;
+    height: auto;
+    text-align: left;
+
+    .message{
+        margin-top: 10px;
     }
-    &.News {
-        top: 300px;
-        height: auto;
-        text-align: left;
 
-        .message{
-            margin-top: 10px;
+    .tag {
+        vertical-align: top;
+        color: white;
+        display: inline-block;
+        border-radius: 5px;
+        padding: 5px;
+        font-size: 12px;
+        &.fixed{
+            background: green;
         }
-
-        .tag {
-            vertical-align: top;
-            color: white;
-            display: inline-block;
-            border-radius: 5px;
-            padding: 5px;
-            font-size: 12px;
-            &.fixed{
-                background: green;
-            }
-            &.new{
-                background: orange;
-            }
-            
+        &.new{
+            background: orange;
         }
-        .content {
-            position: relative;
-            display: inline-block;
-            margin-left: 10px;
-            width: 80%;
-        }
-
-
+        
     }
-    
+    .content {
+        position: relative;
+        display: inline-block;
+        margin-left: 10px;
+        width: 80%;
+    }
+
+
 }

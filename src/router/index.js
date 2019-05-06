@@ -10,7 +10,7 @@ export default new Router({
     {
       path: '/',
       name: 'home',
-      component: () => import('../components/AlphaSoulStatus.vue')
+      component: () => import('../components/Index.vue')
     },
     {
       path: '/game',

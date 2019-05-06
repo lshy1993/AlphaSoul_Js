@@ -4,23 +4,29 @@
         <link v-for="(pic,index) in preloadImgList()" :key="'pi'+index" rel="preload" :href="pic" as="image" />
         <link v-for="(file,index) in preloadVoiceList()" :key="'au'+index" rel="preload" :href="file" as="audio" />
     </div>
-    <announce-news />
-    <div id="game">
-        <!--audio ref="mainAudio"></audio-->
-        <div :class="['BoardDiv','Menu']">
-            <span>本页面程序仅供学习使用，素材均来自于雀魂游戏</span>
-            <h2>AlphaSoul对战系统</h2>
-            <h4>v0.0.3</h4>
+    <div id="Menu" class="BorderDiv">
+        <span>本页面程序仅供学习使用，素材均来自于雀魂游戏</span>
+        <h2>在线练习系统</h2>
+        <h4>v0.0.4</h4>
+        <div style="margin:10px;">
+            <span style="float:left;">AlphaSoul辅助</span>
+            <input type="checkbox" id="assist_alpha" v-model="aiOn">
+            <label for="assist_alpha">开启</label>
+        </div>
+        <div>
             <button v-if="!serverConnected" @click="reLink">ReLink</button>
             <button v-if="serverConnected" @click="newGame">NewGame</button>
             <h4>{{ wsMsg }}</h4>
         </div>
+    </div>
+    <game-assist ref="gamehelper" v-if="aiOn" :game-status="gameStatus" @dyeTile="dyeTile"/>
+    <div id="game">
         <!-- 宝牌指示 -->
         <div class="BaoDiv">
-            <div v-for="index in 5" :key="index" :class="[index<=bao.length?'PaiDivS':'PaiMask']">
-                <img v-if="index<=bao.length" :src="imgUrl(bao[index-1])" />
+            <div v-for="index in 5" :key="index" :class="[index<=gameStatus.bao.length?'PaiDivS':'PaiMask']">
+                <img v-if="index<=gameStatus.bao.length" :src="imgUrl(gameStatus.bao[index-1])" />
             </div>
-            <div>场棒：{{ changbang }} 立直棒：{{ lizhibang }}</div>
+            <div>场棒：{{ gameStatus.changbang }} 立直棒：{{ gameStatus.lizhibang }}</div>
         </div>
         <!-- 牌桌 -->
         <div class="TableDiv">
@@ -34,12 +40,12 @@
             <!-- 手牌与副露 -->
             <div v-for="pid_h in 3" :key="'hs'+pid_h" :class="['HandDiv',['right','top','left'][pid_h-1]]">
                 <div style="display: inline-block; float:left;">
-                    <div v-for="(code,ind) in handStack[pid_h]" :key="ind" :class="[code=='*'?'PaiMask':'PaiDivS',checkLast(ind,pid_h)?'LastS':'']">
+                    <div v-for="(code,ind) in gameStatus.handStack[pid_h]" :key="ind" :class="[code=='*'?'PaiMask':'PaiDivS',checkLast(ind,pid_h)?'LastS':'']">
                         <img v-if="code!='*'" :src="imgUrl(code.substr(0,2))" width="40" height="65"/>
                     </div>
                 </div>
                 <div style="display: inline-block; float:right;">
-                    <div v-for="(code,indc) in fuluStack[pid_h]" :key="'fulu'+indc" class="Mianzi">
+                    <div v-for="(code,indc) in gameStatus.fuluStack[pid_h]" :key="'fulu'+indc" class="Mianzi">
                         <div v-for="(p,i) in sortFulu(code)" :key="'ch'+i" :class="['PaiDivS',p.length>2?'PaiRotateS':'']">
                             <img :src="imgUrl(p.substr(0,2))" width="40" height="65"/>
                         </div>
@@ -48,7 +54,7 @@
             </div>
             <!-- 牌河 -->
             <div v-for="pid_r in 4" :key="'rv'+pid_r" :class="['RiverDiv',['bottom','right','top','left'][pid_r-1]]">
-                <div v-for="(code,index) in riverStack[pid_r-1]" :key="index" :class="['PaiDivS',code.length==3?'RiverRotateS':'']">
+                <div v-for="(code,index) in gameStatus.riverStack[pid_r-1]" :key="index" :class="['PaiDivS',code.length==3?'RiverRotateS':'']">
                     <img :src="imgUrl(code.substr(0,2))" width="40" height="65"/>
                 </div>
             </div>
@@ -59,18 +65,18 @@
             <!-- 中央 -->
             <div class="CenterDiv">
                 <div v-for="pids in 4" :key="pids" :class="['ScoreDiv',['bottom','right','top','left'][pids-1]]">
-                    <div class="windDiv">{{ ['东','南','西','北'][((pids-1)-qinjia+4)%4] }}</div>
+                    <div class="windDiv">{{ ['东','南','西','北'][((pids-1)-gameStatus.qinjia+4)%4] }}</div>
                     <div class="turnDiv">
-                        <div :class="['scoreTxt',curWind==(pids-1)?'turned':'']">{{ score[pids-1] }}</div>
-                        <div class="lizhiDiv" v-if="playerLizhi[pids-1]">・</div>
+                        <div :class="['scoreTxt',curWind==(pids-1)?'turned':'']">{{ gameStatus.score[pids-1] }}</div>
+                        <div class="lizhiDiv" v-if="gameStatus.playerLizhi[pids-1]">・</div>
                     </div>
                 </div>
                 <div class="InfoPanel">
-                    <h2>{{ ['东','南','西','北'][changfeng]+['一','二','三','四'][qinjia]+'局' }}</h2>
-                    <div>剩余牌山：{{ restyama }}</div>
-                    <div>场棒：{{ changbang }}</div>
-                    <div>立直棒：{{ lizhibang }}</div>
-                    <div>宝牌：{{ bao }}</div>
+                    <h2>{{ ['东','南','西','北'][gameStatus.changfeng]+['一','二','三','四'][gameStatus.qinjia]+'局' }}</h2>
+                    <div>剩余牌山：{{ gameStatus.restyama }}</div>
+                    <div>场棒：{{ gameStatus.changbang }}</div>
+                    <div>立直棒：{{ gameStatus.lizhibang }}</div>
+                    <div>宝牌：{{ gameStatus.bao }}</div>
                 </div>
             </div>
         </div>
@@ -112,7 +118,7 @@
                     <h2 v-if="0&&humsg.ptres.fanshu==0">{{ ['','两倍','三倍','四倍','五倍','六倍'][humsg.ptres.damanguan-1]+'役满' }}</h2>
                     <h1>{{ getFinalTxt(humsg.ptres)+'   '+humsg.ptres.defen }}</h1>
                 </div>
-                <button style="width:80px;height:40px;" @click="confirmOpt(humsg.ptres.fenpei)">确认</button>
+                <button style="width:80px;height:40px;" @click="confirmOpt()">确认</button>
             </div>
             <div v-if="liumsg.opt != undefined && !scoreChangeOn" class="BlackDiv  ResultDiv">
                 <div>{{ ['四风连打','四家立直','荒牌流局','四杠散了'][liumsg.opt] }}</div>
@@ -181,13 +187,14 @@
                 </div>
                 <div style="height:130px;position:relative;width:100%;">
                     <transition-group name="flip-list" class="handDiv" tag="div">
-                        <div v-for="(code,index) in handFlip()" :key="code" @mouseenter="tingPai=getTingPai(index)" @mouseleave="hintOn=false;" @click="discardPai(index)" :class="['PaiDiv', checkLast(index,seat)?'Last':'']">
+                        <div v-for="(code,index) in handFlip()" :key="code" @mouseenter="tingPai=getTingPai(index)" @mouseleave="hintOn=false;" @click="discardPai(index)" :class="['PaiDiv', checkLast(index,gameStatus.seat)?'Last':'']">
                             <img :src="imgUrl(code.substr(0,2))" />
                             <div v-if="lizhiMask(index)" :class="['BigMask']"></div>
+                            <div v-if="normalized!=undefined && normalized[index]!=-1" :style="'mix-blend-mode:color; background:rgba(159, 240, 72,'+normalized[index]/2+');'" class="BigMask" />
                         </div>
                     </transition-group>
                     <div class="fuluDiv">
-                        <div v-for="(code,indc) in fuluStack[seat]" :key="'fulu'+indc" class="Mianzi">
+                        <div v-for="(code,indc) in gameStatus.fuluStack[gameStatus.seat]" :key="'fulu'+indc" class="Mianzi">
                             <div v-for="(p,i) in sortFulu(code)" :key="'ch'+i" :class="['PaiDiv',p.length>2?'PaiRotate':'']">
                                 <img :src="imgUrl(p.substr(0,2))" />
                             </div>
@@ -202,36 +209,40 @@
 </template>
 
 <script>
-import AnnounceNews from './AnnounceNews.vue';
+import GameAssist from './GameAssist.vue';
 import FanTool from '../js/fan.js';
 import { Howl, Howler } from 'howler';
+
 var TWEEN = require('@tweenjs/tween.js');
 const async = require('async');
 
 export default {
     name: 'netgame',
     data(){
-        return{
+        return {
+            aiOn: true,
             ws: Object,
             serverConnected: false,
             wsMsg: '',
-            seat: 0,
-            qinjia: 0,
-            changfeng: 0,
-            zifeng: 0,
-            changbang: 0,
-            lizhibang: 0,
-            score: [25000,25000,25000,25000],
+            normalized: [],
+            gameStatus: {
+                seat: 0,
+                qinjia: 0,
+                changfeng: 0,
+                zifeng: 0,
+                changbang: 0,
+                lizhibang: 0,
+                score: [25000,25000,25000,25000],
+                restyama: 0,
+                bao: [],
+                playerLizhi: [false,false,false,false],
+                handStack: [[],[],[],[]],
+                fuluStack: [[],[],[],[]],
+                riverStack: [[],[],[],[]],
+            },
             tweenedScore: [0,0,0,0],
-            fenpei: [1000,-1000,2000,-1000],
+            fenpei: [0,0,0,0],
             tweenedFenpei: [0,0,0,0],
-            restyama: 0,
-            bao: [],
-            handStack: [[],[],[],[]],
-            fuluStack: [[],[],[],[]],
-            riverStack: [[],[],[],[]],
-            playerLizhi: [false,false,false,false],
-            playerLizhiPai: [false,false,false,false], 
             humsg: {},
             huList: [],
             huPos: 0,
@@ -320,6 +331,9 @@ export default {
         }
         this.reLink();
     },
+    destroyed: function () {
+        this.ws.close();
+    },  
     methods: {
         reLink: function(){
             var _self = this;
@@ -351,24 +365,24 @@ export default {
         resetParam: function(){
             this.humsg = {};
             this.liumsg = {};
-            this.bao = [];
             this.lizhiOn = false;
             this.optFlag = {};
             this.subOptOn = false;
             this.scoreChangeOn = false;
             this.endGameOn = false;
-            this.fuluStack = [[],[],[],[]];
-            this.riverStack = [[],[],[],[]];
-            this.handStack = [[],[],[],[]];
             this.tingPai = [];
-            this.playerLizhi = [false,false,false,false];
-            this.playerLizhiPai = [false,false,false,false];
+
+            this.gameStatus.bao = [];
+            this.gameStatus.fuluStack = [[],[],[],[]];
+            this.gameStatus.riverStack = [[],[],[],[]];
+            this.gameStatus.handStack = [[],[],[],[]];
+            this.gameStatus.playerLizhi = [false,false,false,false];
         },
         playHuEnded(){
             this.humsg = this.huList[this.huPos];
             let pid = this.humsg.seat;
             this.txtMsg[pid] = '';
-            this.handStack[pid] = this.humsg.hand;
+            this.gameStatus.handStack[pid] = this.humsg.hand;
             this.sortPai(pid);
             
             // 生成报菜名表
@@ -385,9 +399,17 @@ export default {
                         autoplay: true
                     });
                     sound.on('end',function(){
-                        console.log(file);
+                        // console.log(file);
                         callback(null,file);
                     });
+                    sound.on('loaderror',function(){
+                        console.log('load ',file,' fail!');
+                        callback(null,file);
+                    })
+                    sound.on('playerror',function(){
+                        console.log('play ',file,' fail!');
+                        callback(null,file);
+                    })
                     _self.fanPos++;
                 }
                 task.push(tk);
@@ -403,21 +425,24 @@ export default {
             this.txtMsg[pid] = '';
             for(let ii in e.tiles){
                 var p = e.tiles[ii];
-                var from = e.from[ii];
-                if(from != this.seat){
+                var from = e.froms[ii];
+                let hand = this.gameStatus.handStack[from];
+                if(from != this.gameStatus.seat){
                     // 其他人副露
-                    this.handStack[from].splice(0,1);
+                    hand.splice(0,1);
                     continue;
                 }else{
-                    let index = this.handStack[from].indexOf(p);
+                    //let index = this.gameStatus.handStack[from].indexOf(p);
+                    let index = hand.indexOf(p);
                     if(index == -1){
                         console.log('副露牌错误',p);
                     }else{
-                        this.handStack[from].splice(index,1);
+                        //this.gameStatus.handStack[from].splice(index,1);
+                        hand.splice(index,1);
                     }
                 }
             }
-            this.fuluStack[pid].push(e.tiles.join('|'));
+            this.gameStatus.fuluStack[pid].push(e.tiles.join('|'));
         },
         playFuluEnded(e){
             let pid = e.seat;
@@ -425,92 +450,105 @@ export default {
             // 副露
             for(let ii in e.tiles){
                 var p = e.tiles[ii];
-                var from = e.from[ii];
+                var from = e.froms[ii];
+                let hand = this.gameStatus.handStack[from];
                 if(p.length == 2) {
-                    if(from != this.seat){
+                    if(from != this.gameStatus.seat){
                         // 其他人副露
-                        this.handStack[from].splice(0,1);
+                        hand.splice(0,1);
                         continue;
                     }else{
-                        let index = this.handStack[from].indexOf(p);
+                        //let index = this.gameStatus.handStack[from].indexOf(p);
+                        let index = hand.indexOf(p);
                         if(index == -1){
                             console.log('副露牌错误',p);
                         }else{
-                            this.handStack[from].splice(index,1);
+                            // this.gameStatus.handStack[from].splice(index,1);
+                            hand.splice(index,1);
                         }
                     }
                 }else{
                     // 河牌中取出
-                    this.riverStack[from].pop();
+                    this.gameStatus.riverStack[from].pop();
                 }
             }
-            this.fuluStack[pid].push(e.tiles.join('|'));
+            this.gameStatus.fuluStack[pid].push(e.tiles.join('|'));
         },
         playLizhiEnded(e){
-            this.score[e.seat] -= 1000;
             this.txtMsg[e.seat] = '';
+            this.gameStatus.lizhibang++;
+            this.gameStatus.score[e.seat] -= 1000;
         },
         decode: function(e){
             console.log(e);
             if(e.type == "ActionHule"){
-                var _self = this;
-                // TODO: 多人胡牌的情况
                 this.huList = e.data;
                 this.huPos = 0;
+                // 多人胡牌的情况
+                let task = [];
                 for(var submsg of e.data){
                     this.txtMsg[submsg.seat] = submsg.opt==9?'胡':'自摸';
-                    var sound = new Howl({
-                        src: '/audio/'+this.charaName[submsg.seat]+'/'+(submsg.opt==9?'act_ron.mp3':'act_tumo.mp3'),
-                        autoplay: true
-                    });
-                    sound.once('end',function(){
-                        _self.playHuEnded();
-                    });
+                    let file = '/audio/'+this.charaName[submsg.seat]+'/'+(submsg.opt==9?'act_ron.mp3':'act_tumo.mp3');
+                    let tk = callback => {
+                        var sound = new Howl({
+                            src: file,
+                            autoplay: true
+                        });
+                        sound.once('end',function(){
+                            callback(null,file);
+                        });
+                    }
+                    task.push(tk);
                 }
+                async.parallel(task,(err,result)=>{
+                    this.playHuEnded();
+                });
             }
             else if(e.type == 'ActionNewRound'){
                 this.resetParam();
                 // 初始起牌
-                this.seat = e.seat;
-                this.qinjia = e.qinjia;
-                this.changfeng = e.changfeng;
-                this.zifeng = e.zifeng;
-                this.changbang = e.changbang;
-                this.lizhibang = e.lizhibang;
-                this.score = e.score;
-                this.bao = e.bao;
-                for(var i in this.handStack){
-                    if(i == this.seat) this.handStack[i] = e.handStack;
+                this.gameStatus.seat = e.seat;
+                this.gameStatus.qinjia = e.qinjia;
+                this.gameStatus.changfeng = e.changfeng;
+                this.gameStatus.zifeng = e.zifeng;
+                this.gameStatus.changbang = e.changbang;
+                this.gameStatus.lizhibang = e.lizhibang;
+                this.gameStatus.score = e.score;
+                this.gameStatus.bao = e.bao;
+                for(var i=0;i<4;i++){
+                    if(i == this.gameStatus.seat) this.gameStatus.handStack[i] = e.handStack;
                     else {
-                        this.handStack[i] = new Array(13);
-                        this.handStack[i].fill('*');
+                        this.gameStatus.handStack[i] = new Array(13);
+                        this.gameStatus.handStack[i].fill('*');
                     }
                 }
-                this.sortPai(this.seat);
+                this.sortPai(this.gameStatus.seat);
             }
             else if(e.type == 'ActionDealTile'){
                 // 新摸牌
-                this.restyama = e.restyama;
+                this.gameStatus.restyama = e.restyama;
                 this.curWind = e.seat;
-                var handStack = this.handStack[e.seat];
+                var handStack = this.gameStatus.handStack[e.seat];
                 if(e.tile==''){
                     handStack.push('*');
-                }else handStack.push(e.tile);
+                }else{
+                    handStack.push(e.tile);
+                }
             }
             else if(e.type == 'ActionDiscardTile'){
                 var _self = this;
                 this.restyama = e.restyama;
-                if(this.seat != e.seat){
-                    this.handStack[e.seat].splice(e.tilepos,1);
+                if(this.gameStatus.seat != e.seat){
+                    this.gameStatus.handStack[e.seat].splice(e.tilepos,1);
                 }
                 if('doras' in e){
                     // 翻开宝牌
-                    this.bao = this.bao.concat(e.doras);
+                    this.gameStatus.bao = this.gameStatus.bao.concat(e.doras);
                 }
                 var tile = e.tile;
                 if(e.is_liqi || e.is_wliqi){
                     this.txtMsg[e.seat] = '立直';
-                    this.playerLizhi[e.seat] = true;
+                    this.gameStatus.playerLizhi[e.seat] = true;
                     tile += '*';
                     let sound = new Howl({
                         src: '/audio/'+this.charaName[e.seat]+'/'+(e.is_liqi?'act_rich.mp3':'act_drich.mp3'),
@@ -521,20 +559,22 @@ export default {
                         }
                     });
                 }
-                this.riverStack[e.seat].push(tile);
+                this.gameStatus.riverStack[e.seat].push(tile);
             }
             else if(e.type == 'ActionChiPengGang'){
                 var _self = this;
                 // 将牌从手牌中剔除，加入副露中
-                this.txtMsg[pid] = ['吃','碰','杠'][e.opt-2];
+                this.txtMsg[pid] = ['吃','碰','','杠'][e.opt-2];
                 let pid = e.seat;
                 var sound = new Howl({
-                    src: '/audio/'+this.charaName[pid]+'/'+['act_chi.mp3','act_pon.mp3','act_kan.mp3'][e.opt-2],
-                    autoplay: true,
-                    onend: function() {
-                        // console.log('Finished!');
-                        _self.playFuluEnded(e);
-                    }
+                    src: '/audio/'+this.charaName[pid]+'/'+['act_chi.mp3','act_pon.mp3','','act_kan.mp3'][e.opt-2],
+                    autoplay: true
+                });
+                sound.once('end',()=>{
+                    this.playFuluEnded(e);
+                });
+                sound.once('loaderror',()=>{
+                    this.playFuluEnded(e);
                 });
             }
             else if(e.type == 'ActionAnGangAddGang'){
@@ -558,10 +598,9 @@ export default {
                     for(let ii in e.tingPai){
                         // 听牌的人展示手牌
                         if(e.xiangting[ii] == 0){
-                            this.handStack[ii] = e.hand[ii];
+                            this.gameStatus.handStack[ii] = e.hand[ii];
                             this.sortPai(ii);
                             this.tingPai[ii] = e.tingpai;
-                            // this.fuluStack[ii] = e.fulu[ii];
                         }
                     }
                     // this.fenpei = e.fenpei;
@@ -575,6 +614,7 @@ export default {
             }
 
             if(e.hasOwnProperty('operation')){
+                this.$refs.gamehelper.Calculate();
                 this.comb = e.operation;
                 this.changeFlag(e.operation);
                 this.lizhi_state = e.lizhi_state;
@@ -584,12 +624,12 @@ export default {
                     setTimeout(() => {
                         this.ws.send(JSON.stringify({
                             type:'qiepai',
-                            from: parseInt(this.seat),
+                            from: parseInt(this.gameStatus.seat),
                             tile: e.tile,
                             lizhi: false
                         }));
-                        this.handStack[this.seat].pop();
-                        this.sortPai(this.seat);
+                        this.gameStatus.handStack[this.gameStatus.seat].pop();
+                        this.sortPai(this.gameStatus.seat);
                     }, 500);
                 }
             }
@@ -606,7 +646,7 @@ export default {
                 let type = opt.type;
                 if(type == 1){
                     this.optFlag.qie = true;
-                    this.handStack[this.seat].forEach((element,i) => {
+                    this.gameStatus.handStack[this.gameStatus.seat].forEach((element,i) => {
                         this.canDiscard[i] = true;
                     });
                 }
@@ -636,7 +676,7 @@ export default {
         handFlip: function(){
             var hand = [];
             var repeat = {};
-            for(var p of this.handStack[this.seat]){
+            for(var p of this.gameStatus.handStack[this.gameStatus.seat]){
                 if(repeat[p] == undefined){
                     repeat[p] = 0;
                 }else{
@@ -655,17 +695,17 @@ export default {
             this.comb = {};
             this.optFlag = {};
 
-            let dapai = this.handStack[this.seat][index];
+            let dapai = this.gameStatus.handStack[this.gameStatus.seat][index];
             this.ws.send(JSON.stringify({
                 type: 'qiepai',
-                from: parseInt(this.seat),
+                from: parseInt(this.gameStatus.seat),
                 tile: dapai,
                 lizhi: this.lizhiOn
             }));
             
             this.lizhiOn = false;
-            this.handStack[this.seat].splice(index,1);
-            this.sortPai(this.seat);
+            this.gameStatus.handStack[this.gameStatus.seat].splice(index,1);
+            this.sortPai(this.gameStatus.seat);
         },
         selectOpt: function(key){
             let tt = this.comb.filter((x)=>{
@@ -693,31 +733,31 @@ export default {
             if(obj.type < 4 || obj.type == 5){
                 this.ws.send(JSON.stringify({
                     type: 'chipenggang',
-                    from: parseInt(this.seat),
+                    from: parseInt(this.gameStatus.seat),
                     combination: [obj.combination, obj.type]
                 }));
             }else if(obj.type == 4 || obj.type == 6){
                 this.ws.send(JSON.stringify({
                     type: 'angangjiagang',
-                    from: parseInt(this.seat),
+                    from: parseInt(this.gameStatus.seat),
                     combination: [obj.combination, obj.type]
                 }));
             }else if(obj.type == 8){
                 this.ws.send(JSON.stringify({
                     type: 'zimo',
-                    from: parseInt(this.seat),
+                    from: parseInt(this.gameStatus.seat),
                     tile: obj.combination
                 }));
             }else if(obj.type == 9){
                 this.ws.send(JSON.stringify({
                     type: 'hu',
-                    from: parseInt(this.seat),
+                    from: parseInt(this.gameStatus.seat),
                     tile: obj.combination
                 }));
             }else if(obj.type == 10){
                 this.ws.send(JSON.stringify({
                     type: 'liuju',
-                    from: parseInt(this.seat)
+                    from: parseInt(this.gameStatus.seat)
                 }));
             }
             this.subOptOn = false;
@@ -731,7 +771,7 @@ export default {
                 ss.push(pai.dapai);
             }
             console.log(ss);
-            var handStack = this.handStack[this.seat];
+            var handStack = this.gameStatus.handStack[this.gameStatus.seat];
             handStack.forEach((ele,i) => {
                 this.canDiscard[i] = false;
                 for(var p of ss){
@@ -743,9 +783,29 @@ export default {
         lizhiMask: function(index){
             return this.lizhiOn && !this.canDiscard[index];
         },
+        dyeTile(cal_res){
+            console.log('emited!');
+            let hand = this.gameStatus.handStack[this.gameStatus.seat];
+            var normalized = [];
+            var min = 999,max = 0;
+            for(let res of cal_res){
+                if(res[3] == -1) continue;
+                min = Math.min(min,res[3]);
+                max = Math.max(max,res[3]);
+            }
+            for(var i in hand){
+                for(let res of cal_res){
+                    if(hand[i] == res[0]){
+                        let ss = res[3] == -1 ? 0:((res[3]-min)/(max-min)).toFixed(2);
+                        normalized.push(ss);
+                    }
+                }
+            }
+            this.normalized = normalized;
+        },
         getTingPai: function(index){
             if(!this.lizhiOn) return[];
-            let dapai = this.handStack[this.seat][index];
+            let dapai = this.gameStatus.handStack[this.gameStatus.seat][index];
             for(var comb of this.combShow){
                 // console.log('tingpai:',index,comb);
                 if(comb.dapai == dapai){
@@ -773,12 +833,12 @@ export default {
             if(this.lizhi_state){
                 this.ws.send(JSON.stringify({
                     type:'qiepai',
-                    from: parseInt(this.seat),
+                    from: parseInt(this.gameStatus.seat),
                     tile: this.lizhi_tile,
                     lizhi: false
                 }));
-                this.handStack[this.seat].pop();
-                this.sortPai(this.seat);
+                this.gameStatus.handStack[this.gameStatus.seat].pop();
+                this.sortPai(this.gameStatus.seat);
                 return;
             }
             // 暗杠立直自摸取消
@@ -787,7 +847,7 @@ export default {
             }else{
                 this.ws.send(JSON.stringify({
                     type:'cancel',
-                    from: this.seat
+                    from: this.gameStatus.seat
                 }));
                 this.optFlag = {};
             }
@@ -801,16 +861,23 @@ export default {
             }
             if(!this.scoreChangeOn){
                 this.scoreChangeOn = true;
-                this.tweenedScore = this.score;
-                this.tweenedFenpei = fp;
-                setTimeout(() => {
-                    var fi = [0,0,0,0];
+                this.tweenedScore = this.gameStatus.score;
+                if(fp == undefined){
+                    fp = [0,0,0,0];
                     for(var msg of this.huList){
+                        // 统计总分
                         for(var i in msg.ptres.fenpei){
-                            fi[i] = this.score[i] + fp[i];
+                            fp[i] += msg.ptres.fenpei[i];
                         }
                     }
-                    this.score = fi;
+                }
+                this.tweenedFenpei = fp;
+                var newscore = [0,0,0,0];
+                for(var i in this.gameStatus.score){
+                    newscore[i] = this.gameStatus.score[i]+fp[i];
+                }
+                setTimeout(() => {
+                    this.gameStatus.score = newscore;
                     this.fenpei = [0,0,0,0];
                 }, 1000);
                 return;
@@ -818,7 +885,7 @@ export default {
             this.resetParam();
             this.ws.send(JSON.stringify({
                 type:'confirm',
-                from: this.seat
+                from: this.gameStatus.seat
             }))
         },
         imgUrl: function(code){
@@ -828,8 +895,11 @@ export default {
             return '/img/'+this.charaPic[i]+'.png';
         },
         checkLast: function(index,seat){
-            let flag1 = (index==this.handStack[seat].length-1)&&(this.handStack[seat].length+this.fuluStack[seat].length*3==14);
-            return flag1;
+            let hand = this.gameStatus.handStack[seat];
+            let fulu = this.gameStatus.fuluStack[seat];
+            let flag1 = (index==hand.length-1);
+            let flag2 = (hand.length+fulu.length*3==14);
+            return flag1 && flag2;
         },
         preloadVoiceList: function(){
             return FanTool.getPreloadVoice();
@@ -868,7 +938,7 @@ export default {
                 }
                 return tv[a[1]]-tv[b[1]];
             }
-            this.handStack[seat].sort(cmp);
+            this.gameStatus.handStack[seat].sort(cmp);
         },
         sortFulu: function(code){
             var strList = code.split('|');
@@ -896,10 +966,10 @@ export default {
         },
         sortScore: function(){
             var plist = [];
-            for(var ss in this.score){
+            for(var ss in this.gameStatus.score){
                 plist.push({
                     id: ss,
-                    score: this.score[ss],
+                    score: this.gameStatus.score[ss],
                     wind: ss
                 });
             }
@@ -909,11 +979,12 @@ export default {
                 }
                 return a.score - b.score;
             })
+            plist.reverse();
             return plist.map((x)=>{return x.id});
         }
     },
     components:{
-        AnnounceNews
+        GameAssist
     }
 }
 </script>

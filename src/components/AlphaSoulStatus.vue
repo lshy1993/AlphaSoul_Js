@@ -1,27 +1,25 @@
 <template>
-  <div>
+<div class="BorderDiv">
     <h1>AlphaSoul 运行状态</h1>
-    <div>直播画面</div>
     <h1>AlphaSoul 历史战绩</h1>
     <h1>AlphaSoul 学习状态</h1>
-  </div>
+</div>
 </template>
 
 <script>
 export default {
-  name: 'AlphaSoulStatus',
-  data() {
-    return {
-      ws: Object,
-      msg: ''
-    }
-  },
-  methods: {
+    name: 'AlphaSoulStatus',
+    data() {
+        return {
+            
+        }
+    },
+    methods: {
 
-  },
-  components:{
-    
-  }
+    },
+    components:{
+
+    }
 }
 </script>
 

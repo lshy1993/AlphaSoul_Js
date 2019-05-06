@@ -16,7 +16,7 @@
             <img v-if="index<=bao.length" :src="imgUrl(bao[index-1])" />
         </div>
         <div v-for="bindex in 5" :key="'libao'+bindex" :class="[bindex<=libao.length?'PaiDivS':'PaiMask']">
-            <img v-if="bindex<=libao.length" :src="imgUrl(bao[bindex-1])" />
+            <img v-if="bindex<=libao.length" :src="imgUrl(libao[bindex-1])" />
         </div>
         <div>场棒：{{ changbang }} 立直棒：{{ lizhibang }}</div>
     </div>
@@ -33,17 +33,17 @@
             <div class="iconImg">
                 <img :src="headUrl(chara-1)" width="100" height="100" />
             </div>
-            <div style="color:white;">{{ ['玩家','AlphaSoul科学','AlphaSoul昭和','AlphaSoul玄学'][chara-1] }}</div>
+            <div style="color:white;">{{ ['AlphaSoul令和','AlphaSoul科学','AlphaSoul昭和','AlphaSoul玄学'][chara-1] }}</div>
         </div>
         <!-- 手牌与副露 -->
-        <div v-for="pid_h in 3" :key="'hs'+pid_h" :class="['HandDiv',['right','top','left'][pid_h-1]]">
+        <div v-for="pid_h in 4" :key="'hs'+pid_h" :class="['HandDiv',['bottom','right','top','left'][pid_h-1]]">
             <div style="display: inline-block; float:left;">
-                <div v-for="(code,ind) in handStack[pid_h]" :key="ind" :class="[code=='*'?'PaiMask':'PaiDivS',checkLast(ind,pid_h)?'LastS':'']">
+                <div v-for="(code,ind) in handStack[pid_h-1]" :key="ind" :class="[code=='*'?'PaiMask':'PaiDivS',checkLast(ind,pid_h-1)?'LastS':'']">
                     <img v-if="code!='*'" :src="imgUrl(code.substr(0,2))" width="40" height="65"/>
                 </div>
             </div>
             <div style="display: inline-block; float:right;">
-                <div v-for="(code,indc) in fuluStack[pid_h]" :key="'fulu'+indc" class="Mianzi">
+                <div v-for="(code,indc) in fuluStack[pid_h-1]" :key="'fulu'+indc" class="Mianzi">
                     <div v-for="(p,i) in sortFulu(code)" :key="'ch'+i" :class="['PaiDivS',!p && p.length>2?'PaiRotateS':'']">
                         <img :src="imgUrl(p.substr(0,2))" width="40" height="65"/>
                     </div>
@@ -70,7 +70,7 @@
                 </div>
             </div>
             <div class="InfoPanel">
-                <h1>{{ ['东','南','西','北'][changfeng]+['一','二','三','四'][qinjia]+'局' }}</h1>
+                <h2>{{ ['东','南','西','北'][changfeng]+['一','二','三','四'][qinjia]+'局' }}</h2>
                 <div>剩余牌山：{{ restyama }}</div>
                 <div>场棒：{{ changbang }}</div>
                 <div>立直棒：{{ lizhibang }}</div>
@@ -80,12 +80,12 @@
     </div>
     <!-- 得分和终局 -->
     <div class="ResultWrap">
-        <div v-if="humsg.hand != undefined && !scoreChangeOn" class="BlackDiv ResultDiv">
+        <div v-if="humsg != undefined && humsg.hand != undefined && !scoreChangeOn" class="BlackDiv ResultDiv">
             <div>
                 <div v-for="(hcode,hindex) in humsg.hand" :key="'h'+hindex" :class="['PaiDivS',hcode.length==3?'LastS':'']">
                     <img :src="imgUrl(hcode.substr(0,2))" />
                 </div>
-                <div v-for="(fcode,findex) in fuluStack[humsg.seat]" :key="'f'+findex" class="Mianzi">
+                <div v-for="(fcode,findex) in humsg.fulu" :key="'f'+findex" class="Mianzi">
                     <div v-for="(p,i) in sortFulu(fcode)" :key="'ch'+i" :class="['PaiDivS',p.length>2?'PaiRotateS':'']">
                         <img :src="imgUrl(p.substr(0,2))" />
                     </div>
@@ -127,15 +127,15 @@
             </div>
             <button style="width:80px;height:40px;" @click="confirmOpt(liumsg.fenpei)">确认</button>
         </div>
-        <div class="BlackDiv ScoreChangeDiv" v-if="scoreChangeOn">
+        <!--div class="BlackDiv ScoreChangeDiv" v-if="scoreChangeOn">
             <div style="height:260px; margin-bottom:20px;">
                 <div v-for="sid in 4" :key="'fen'+sid" :class="['ScoreDiv',['bottom','right','top','left'][sid-1]]">
                     <div class="ScoreTxt">{{ tweenedScore[sid-1] }}</div>
                     <div :class="['ChangeTxt',tweenedFenpei[sid-1]<0?'negative':tweenedFenpei[sid-1]>0?'positive':'']">{{ tweenedFenpei[sid-1] }}</div>
                 </div>
             </div>
-            <button style="width:80px;height:40px;" @click="confirmOpt">确认</button>
-        </div>
+            <button style="width:80px;height:40px;" @click="confirmOpt()">关闭</button>
+        </div-->
         <div class="BlackDiv GameEndDiv" v-if="endGameOn">
             <div style="margin-bottom:20px;">
                 <div v-for="sid in sortScore()" :key="'pt'+sid" :class="['FinalDiv']">
@@ -149,55 +149,10 @@
                     </div>
                 </div>
             </div>
-            <button style="width:80px;height:40px;" @click="newGame">NewGame</button>
+            <button style="width:80px;height:40px;" @click="endGameOn=false">关闭</button>
         </div>
     </div>
-    <!-- 玩家操作UI部分 -->
-    <div class="PlayerUI">
-        <div class="PlayerWrap">
-            <div v-if="(hintOn && tingPai!=undefined)" class="hintDiv">
-                <div class="hintWrap">
-                    <!--span>听牌:</span-->
-                    <div v-for="(tcode,tind) in tingPai" :key="'hint'+tind" :class="['PaiDiv']">
-                        <img :src="imgUrl(tcode)" width="80" height="129"/>
-                        <span>{{ ['','振听'][0] }}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="optDiv">
-                <div v-if="subOptOn" style="display:inline-block;float:left;">
-                    <div v-for="(cb,cbindex) in combShow" :key="cbindex" @click="sendOpt(cb)" style="display:inline-block;margin-right:10px;">
-                        <div v-for="(p,index) in cb.combination.split('|')" :key="index" class="PaiDivS">
-                            <img :src="imgUrl(p[0]+p[1])" width="40" height="65"/>
-                        </div>
-                    </div>
-                </div>
-                <button v-if="optFlag.chi&&!subOptOn" @click="selectOpt(2)">吃</button>
-                <button v-if="optFlag.peng&&!subOptOn" @click="selectOpt(3)">碰</button>
-                <button v-if="optFlag.gang&&!subOptOn" @click="selectOpt(4)">杠</button>
-                <button v-if="optFlag.lizhi&&!lizhiOn" @click="selectOpt(7)">立直</button>
-                <button v-if="optFlag.zimo" @click="selectOpt(8)">自摸</button>
-                <button v-if="optFlag.hu" @click="selectOpt(9)">胡</button>
-                <button v-if="optFlag.liuju" @click="selectOpt(10)">流局</button>
-                <button v-if="hasOption" @click="cancelOpt">取消</button>
-            </div>
-            <div style="height:130px;position:relative;width:100%;">
-                <transition-group name="flip-list" class="handDiv" tag="div">
-                    <div v-for="(code,index) in handFlip()" :key="code" @mouseenter="tingPai=getTingPai(index)" @mouseleave="hintOn=false;" @click="discardPai(index)" :class="['PaiDiv', checkLast(index,seat)?'Last':'']">
-                        <img :src="imgUrl(code.substr(0,2))" />
-                        <div v-if="lizhiMask(index)" :class="['BigMask']"></div>
-                    </div>
-                </transition-group>
-                <div class="fuluDiv">
-                    <div v-for="(code,indc) in fuluStack[seat]" :key="'fulu'+indc" class="Mianzi">
-                        <div v-for="(p,i) in sortFulu(code)" :key="'ch'+i" :class="['PaiDiv',!p && p.length>2?'PaiRotate':'']">
-                            <img :src="imgUrl(p.substr(0,2))" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+
   </div>
 </div>
 </template>
@@ -274,8 +229,11 @@ export default {
             this.charaName[i] = charaname[t];
             this.charaPic[i] = charaname[t]+(Math.random()<0.5?'_e':'');
         }
-        this.reLink();
+        // this.reLink();
     },
+    destroyed: function () {
+        this.ws.close();
+    },  
     methods: {
         reLink: function(){
             var _self = this;
@@ -317,14 +275,15 @@ export default {
             this.handStack = [[],[],[],[]];
             this.tingPai = [];
             this.playerLizhi = [false,false,false,false];
-            this.playerLizhiPai = [false,false,false,false];
+            // this.playerLizhiPai = [false,false,false,false];
         },
         playHuEnded(){
             this.humsg = this.huList[this.huPos];
             let pid = this.humsg.seat;
             this.txtMsg[pid] = '';
-            this.handStack[pid] = this.humsg.hand;
-            this.sortPai(pid);
+
+            //this.handStack[pid] = this.humsg.hand;
+            //this.sortPai(pid);
             
             // 生成报菜名表
             this.voiceList = FanTool.getVoiceList(this.humsg.ptres);
@@ -357,7 +316,7 @@ export default {
             this.txtMsg[pid] = '';
             for(let ii in e.tiles){
                 var p = e.tiles[ii];
-                var from = e.from[ii];
+                var from = e.froms[ii];
                 if(from != this.seat){
                     // 其他人副露
                     this.handStack[from].splice(0,1);
@@ -379,7 +338,7 @@ export default {
             // 副露
             for(let ii in e.tiles){
                 var p = e.tiles[ii];
-                var from = e.from[ii];
+                var from = e.froms[ii];
                 if(p.length == 2) {
                     if(from != this.seat){
                         // 其他人副露
@@ -401,6 +360,7 @@ export default {
             this.fuluStack[pid].push(e.tiles.join('|'));
         },
         playLizhiEnded(e){
+            this.lizhibang++;
             this.score[e.seat] -= 1000;
             this.txtMsg[e.seat] = '';
         },
@@ -430,25 +390,32 @@ export default {
                 this.sortPai(3);
             }
             else if(e.type == "ActionHule"){
-                var _self = this;
-                // TODO: 多人胡牌的情况
                 this.huList = e.data;
                 this.huPos = 0;
+                var _self = this;
+                let task = [];
                 for(var submsg of e.data){
                     this.txtMsg[submsg.seat] = submsg.opt==9?'胡':'自摸';
-                    var sound = new Howl({
-                        src: '/audio/'+this.charaName[submsg.seat]+'/'+(submsg.opt==9?'act_ron.mp3':'act_tumo.mp3'),
-                        autoplay: true
-                    });
-                    sound.once('end',function(){
-                        _self.playHuEnded();
-                    });
+                    let file = '/audio/'+this.charaName[submsg.seat]+'/'+(submsg.opt==9?'act_ron.mp3':'act_tumo.mp3');
+                    let tk = callback => {
+                        var sound = new Howl({
+                            src: file,
+                            autoplay: true
+                        });
+                        sound.once('end',function(){
+                            callback(null,file);
+                        });
+                    }
+                    task.push(tk);
                 }
+                async.parallel(task,(err,result)=>{
+                    this.playHuEnded();
+                });
             }
             else if(e.type == 'ActionNewRound'){
                 // this.resetParam();
                 // 初始起牌
-                // this.seat = e.seat;
+                this.playerLizhi = [false,false,false,false];
                 this.qinjia = e.qinjia;
                 this.changfeng = e.changfeng;
                 this.zifeng = e.zifeng;
@@ -460,32 +427,19 @@ export default {
                 this.fuluStack[e.seat] = [];
                 this.riverStack[e.seat] = [];
                 this.sortPai(e.seat);
-
-                // for(var i in this.handStack){
-                //     if(i == this.seat) this.handStack[i] = e.handStack;
-                //     else {
-                //         this.handStack[i] = new Array(13);
-                //         this.handStack[i].fill('*');
-                //     }
-                // }
-                
             }
             else if(e.type == 'ActionDealTile'){
                 // 新摸牌
                 this.restyama = e.restyama;
+                this.yamaPos = e.yamaPos;
                 this.curWind = e.seat;
                 var handStack = this.handStack[e.seat];
-                if(e.tile==''){
-                    handStack.push('*');
-                }else handStack.push(e.tile);
+                handStack.push(e.tile);
             }
             else if(e.type == 'ActionDiscardTile'){
-                var _self = this;
                 this.restyama = e.restyama;
-                // if(this.seat != e.seat){
-                    
-                // }
-                this.handStack[e.seat].splice(e.tilepos,1);
+                let tilepos = this.handStack[e.seat].indexOf(e.tile);
+                this.handStack[e.seat].splice(tilepos,1);
                 this.sortPai(e.seat);
                 var tile = e.tile;
                 if(e.is_liqi || e.is_wliqi){
@@ -494,14 +448,10 @@ export default {
                     tile += '*';
                     let sound = new Howl({
                         src: '/audio/'+this.charaName[e.seat]+'/'+(e.is_liqi?'act_rich.mp3':'act_drich.mp3'),
-                        autoplay: true,
-                        // onend: function() {
-                        //     console.log('Finished!');
-                        //     _self.playLizhiEnded(e);
-                        // }
+                        autoplay: true
                     });
+                    this.playLizhiEnded(e);
                 }
-                this.playLizhiEnded(e);
                 this.riverStack[e.seat].push(tile);
             }
             else if(e.type == 'ActionChiPengGang'){
@@ -559,30 +509,25 @@ export default {
             }
 
             if(e.hasOwnProperty('operation')){
-                if(e.seat != this.seat) return;
-                this.comb = e.operation;
-                this.changeFlag(e.operation);
-                this.lizhi_state = e.lizhi_state;
-                this.lizhi_tile = e.tile;
-                if(e.lizhi_state && !this.hasOption){
-                    this.optFlag.qie = false;
-                    setTimeout(() => {
-                        this.ws.send(JSON.stringify({
-                            type:'qiepai',
-                            from: parseInt(this.seat),
-                            tile: e.tile,
-                            lizhi: false
-                        }));
-                        this.handStack[this.seat].pop();
-                        this.sortPai(this.seat);
-                    }, 500);
-                }
+                // if(e.seat != this.seat) return;
+                // this.comb = e.operation;
+                // this.changeFlag(e.operation);
+                // this.lizhi_state = e.lizhi_state;
+                // this.lizhi_tile = e.tile;
+                // if(e.lizhi_state && !this.hasOption){
+                //     this.optFlag.qie = false;
+                //     setTimeout(() => {
+                //         this.ws.send(JSON.stringify({
+                //             type:'qiepai',
+                //             from: parseInt(this.seat),
+                //             tile: e.tile,
+                //             lizhi: false
+                //         }));
+                //         this.handStack[this.seat].pop();
+                //         this.sortPai(this.seat);
+                //     }, 500);
+                // }
             }
-        },
-        newGame: function(){
-            // this.$refs.mainAudio.autoplay = true;
-            this.resetParam();
-            this.ws.send(JSON.stringify({type:'newgame'}));
         },
         changeFlag: function(gs){
             //1切 2吃 3碰 4暗杠 5明杠 6加杠 7立直 8自摸 9胡 10九种 11拔北
@@ -630,78 +575,6 @@ export default {
                 hand.push(p+repeat[p]);
             }
             return hand;
-        },
-        discardPai: function(index){
-            if(!this.optFlag.qie) return;
-            if(!this.canDiscard[index]) return;
-
-            this.optFlag.qie = false;
-            this.canDiscard = [];
-            this.comb = {};
-            this.optFlag = {};
-
-            let dapai = this.handStack[this.seat][index];
-            this.ws.send(JSON.stringify({
-                type: 'qiepai',
-                from: parseInt(this.seat),
-                tile: dapai,
-                lizhi: this.lizhiOn
-            }));
-            
-            this.lizhiOn = false;
-            this.handStack[this.seat].splice(index,1);
-            this.sortPai(this.seat);
-        },
-        selectOpt: function(key){
-            let tt = this.comb.filter((x)=>{
-                if(key == 4){
-                    if(x.type in [4,5,6]) return x.combination;
-                }
-                if(x.type == key) return x.combination;
-            });
-            console.log(key,tt);
-            if(tt.length > 1){
-                // 2种以上可能 显示sub
-                this.combShow = tt;
-                this.subOptOn = true;
-            }else{
-                if(key == 7){
-                    // 立直显示选项
-                    this.combShow = tt[0].combination;
-                    this.selectLizhi(tt[0].combination);
-                }else{
-                    this.sendOpt(tt[0]);
-                }
-            }
-        },
-        sendOpt: function(obj){
-            if(obj.type <= 4){
-                this.ws.send(JSON.stringify({
-                    type: 'chipenggang',
-                    from: parseInt(this.seat),
-                    combination: [obj.combination, obj.type]
-                }));
-            }else if(obj.type == 8){
-                this.ws.send(JSON.stringify({
-                    type: 'zimo',
-                    from: parseInt(this.seat),
-                    tile: obj.combination
-                }));
-            }else if(obj.type == 9){
-                this.ws.send(JSON.stringify({
-                    type: 'hu',
-                    from: parseInt(this.seat),
-                    tile: obj.combination
-                }));
-            }else if(obj.type == 10){
-                this.ws.send(JSON.stringify({
-                    type: 'liuju',
-                    from: parseInt(this.seat)
-                }));
-            }
-            this.subOptOn = false;
-            this.comb = {};
-            this.optFlag = {};
         },
         selectLizhi: function(tiles){
             // 显示可以打出的牌
@@ -770,27 +643,10 @@ export default {
                 this.playHuEnded();
                 return;
             }
-            if(!this.scoreChangeOn){
-                this.scoreChangeOn = true;
-                this.tweenedScore = this.score;
-                this.tweenedFenpei = fp;
-                setTimeout(() => {
-                    var fi = [0,0,0,0];
-                    for(var msg of this.huList){
-                        for(var i in msg.ptres.fenpei){
-                            fi[i] = this.score[i] + fp[i];
-                        }
-                    }
-                    this.score = fi;
-                    this.fenpei = [0,0,0,0];
-                }, 1000);
-                return;
-            }
-            this.resetParam();
-            this.ws.send(JSON.stringify({
-                type:'confirm',
-                from: this.seat
-            }))
+            this.scoreChangeOn = false;
+            this.huList = [];
+            this.humsg = {};
+            this.liumsg = {};
         },
         imgUrl: function(code){
             return '/img/'+code+'.png';
