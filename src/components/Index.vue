@@ -1,8 +1,10 @@
 <template>
-<div>
+<div id="index">
     <alpha-soul-live />
-    <announce-news />
-    <alpha-soul-status/>
+    <div style="height: 600px;">
+        <announce-news />
+        <alpha-soul-status/>
+    </div>
 </div>
 </template>
 
@@ -30,6 +32,8 @@ export default {
 }
 </script>
 
-<style>
-
+<style lang="scss">
+#index{
+    
+}
 </style>

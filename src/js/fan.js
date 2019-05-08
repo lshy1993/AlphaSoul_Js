@@ -150,6 +150,57 @@ const fan_voice = {
 '流局满贯':'fan_liujumanguan.mp3'
 };
 
+var columnName = {
+    '立直': 'RICHI',
+    '门前清自摸和': 'TSUMO',
+    '抢杠': 'CHANKAN',
+    '岭上开花': 'RINSHAN',
+    '海底捞月': 'HAITEI',
+    '河底捞鱼': 'HOUTEI',	
+    '役牌 白': 'HAKU',
+    '役牌 发': 'HATSU',
+    '役牌 中': 'CHUN',
+    '门风牌': 'MENFENG',
+    '场风牌': 'CHANGFENG',
+    '断幺九': 'TANYAO',
+    '一杯口': 'IPEIKOU',
+    '平和': 'PINHU'	,
+    '混全带幺九': 'CHANTA',
+    '一气通贯': 'ITTSUU',
+    '三色同顺': 'SANSHOKU_DOUJUN',
+    '两立直': 'WRICHI',
+    '三色同刻': 'SANSHOKU_DOUKO',
+    '三杠子': 'SAN_KANTSU',
+    '对对胡': 'TOITOI',
+    '三暗刻': 'SAN_ANKO',
+    '小三元': 'SHOU_SANGEN',
+    '混老头': 'HONROU',
+    '七对子': 'CHIITOI',
+    '纯全带幺九': 'JUNCHAN',
+    '混一色': 'HONIISOU',
+    '两杯口': 'RYANPEIKOU',
+    '清一色': 'CHINIISOU',
+    '一发': 'IPPATSU',
+    '宝牌': 'BAO',
+    '里宝牌': 'LIBAO',
+    '红宝牌': 'HONGBAO',
+    '流局满贯': 'NAGASHI_MANKAN',
+    '天和': 'TENHOU',
+    '地和': 'CHIIHOU',
+    '国士无双': 'KOKUSHI',
+    '国士无双十三面': 'KOKUSHI_13',
+    '四暗刻': 'SIANKO',
+    '四暗刻单骑': 'SIANKO_TANKI',
+    '大三元': 'DAI_SANGEN',
+    '小四喜': 'SHOU_SUUSHII',
+    '大四喜': 'DAI_SUSSHII',
+    '字一色': 'TSUUIISOU',
+    '清老头': 'CHINROUTOU',
+    '绿一色': 'RYUUIISOU',
+    '九莲宝灯': 'CHUUREN_POUTOU',
+    '纯正九莲宝灯': 'JUNSEI_CHUUREN_POUTOU',
+    '四杠子': 'SUU_KANTSU'	
+}
 // 'gameend_tingpai.mp3',
 // 'gameend_noting.mp3',
 // 'gameend_sigangliuju.mp3',
@@ -231,4 +282,4 @@ function getPreloadVoice(){
     return volist;
 }
 
-export default { getVoiceList, getPreloadVoice };
+export default { getVoiceList, getPreloadVoice,columnName };

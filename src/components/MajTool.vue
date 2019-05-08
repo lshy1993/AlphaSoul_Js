@@ -1,6 +1,6 @@
 <template>
   <div id="majtool">
-    <h1>科学麻将算法解析</h1>
+    <h1 style="margin:0;">科学麻将算法解析</h1>
     <div>
       <div style="display:inline-block;">
         <div v-for="(code,index) in handStack" :key="index" @click="removePai(index)" :class="['PaiDiv', index==13?'Last':'']">
@@ -54,8 +54,8 @@
       <transition name="fade">
         <div v-if="selectorOn" style="text-align:left;overflow:hidden">
           <div v-for="(ch,index) in ['m','p','s','z']" :key="index">
-            <div v-for="(num,index) in (ch == 'z'?7:10)" :key="index" @click="addPai(ch=='z'?num:num-1,ch)" class="PaiDiv">
-              <img :src="imgUrl((ch=='z'?num:num-1)+ch)" width="40" height="65"/>
+            <div v-for="(num,index) in (ch == 'z'?7:10)" :key="index" @click="addPai(ch=='z'?num:num-1,ch)" class="PaiDivS">
+              <img :src="imgUrl((ch=='z'?num:num-1)+ch)"/>
             </div>
           </div>
         </div>

@@ -23,7 +23,7 @@
     </router-link>
     <router-link v-if="debug" class="naviLink" to="/test">Test</router-link>
   </aside>
-  <router-view :class="['mainContent']"></router-view>
+  <router-view :class="['mainContent', sideOn?'wide':'']" ></router-view>
 </div>
 </template>
 
@@ -46,76 +46,5 @@ export default {
 </script>
 
 <style lang="scss">
-#app {
-  width: 100%;
-}
-.naviSide {
-  position: fixed;
-  width: 50px;
-  height: 100%;
-  padding: 10px;
-  background: gray;
-  text-align: left;
-  transition: all 0.3s;
-  z-index: 1020;
 
-  &.wide {
-    width: 150px;
-  }
-
-  .naviLogo {
-    width: 50px;
-    height: 50px;
-    overflow: hidden;
-    transition: all 0.3s;
-
-    &.wide{
-      width: 150px;
-      height: 150px;
-    }
-  }
-
-  .naviLine {
-    height: 2px;
-    margin: 10px 0 10px 0;
-    background: white;
-  }
-
-  .naviLink {
-    height: auto;
-    margin-bottom: 5px;
-  }
-}
-
-.mainContent {
-  position: relative;
-  margin-left: 70px;
-  transition: all .3s;
-  z-index: 1000;
-  height: 100%;
-}
-h1 {
-  margin: 20px 0;
-}
-h2 {
-  margin: 10px 0;
-}
-h3 {
-  margin: 40px 5px;
-}
-h4 {
-  margin: 10px 0;
-}
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-li {
-  display: inline-block;
-  margin: 0 10px;
-}
-a {
-  display: block;
-  color: #42b983;
-}
 </style>

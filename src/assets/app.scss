@@ -11,39 +11,3 @@
     left: 20px;
     width: 250px;
 }
-
-#News {
-    position: relative;
-    left: 20px;
-    width: 300px;
-    height: auto;
-    text-align: left;
-
-    .message{
-        margin-top: 10px;
-    }
-
-    .tag {
-        vertical-align: top;
-        color: white;
-        display: inline-block;
-        border-radius: 5px;
-        padding: 5px;
-        font-size: 12px;
-        &.fixed{
-            background: green;
-        }
-        &.new{
-            background: orange;
-        }
-        
-    }
-    .content {
-        position: relative;
-        display: inline-block;
-        margin-left: 10px;
-        width: 80%;
-    }
-
-
-}

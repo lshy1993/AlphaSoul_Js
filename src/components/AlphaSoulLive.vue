@@ -1,5 +1,5 @@
 <template>
-<div class="BorderDiv">
+<div id="live" class="BorderDiv">
     <h4>直播画面</h4>
 </div>
 </template>
@@ -15,6 +15,12 @@ export default {
 }
 </script>
 
-<style>
-
+<style lang="scss">
+#live {
+    display: block;
+    position: relative;
+    width: 960px;
+    height: 540px;
+    margin: auto;
+}
 </style>
