@@ -106,7 +106,7 @@ export default {
     },
     methods: {
         getData(){
-            this.$http.get("http://localhost:3000/maj").then((response)=>{
+            this.$http.get("https://api.liantui.moe/maj").then((response)=>{
                 // console.log(response.data);
                 this.battle = response.data.battle;
                 this.yaku = response.data.yaku;
