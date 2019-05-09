@@ -1,21 +1,21 @@
 #majtool{
-    .HintBox{
+    .HintBox {
         text-align: left;
         margin: 10px;
     }
-    .BoxHead{
+    .BoxHead {
         text-align: center;
         padding: 5px;
         margin-bottom: 5px; 
     }
-    .PaiSelector{
+    .PaiSelector {
         z-index: 1001;
         position:fixed;
         right:0;
         bottom:0;
         background:white;
     }
-    img{
+    img {
         -webkit-user-select: none;
     }
     table {
@@ -25,22 +25,22 @@
     td {
         border: 1px solid gray; 
     }
-    .PaiList{
+    .PaiList {
         text-align: left;
     }
     .PaiDiv {
         position: relative;
         display: inline-block;
     }
-    .BigMask {
-        width: 80px;
-        height: 129.5px;
-        position: absolute;
-        top: 0;
-        left: 0;
-    }
-    .Last{
-        margin-left: 30px;
+    // .BigMask {
+    //     width: 80px;
+    //     height: 129.5px;
+    //     position: absolute;
+    //     top: 0;
+    //     left: 0;
+    // }
+    .Last {
+        margin-left: 20px;
     }
     .Good{
         background: #9FF048;

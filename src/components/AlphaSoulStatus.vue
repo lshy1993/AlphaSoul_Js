@@ -1,13 +1,11 @@
 <template>
 <div id="status" class="BorderDiv">
+    <div style="font-weight: bold;">AlphaSoul 历史战绩</div>
     <div id="tabDiv">
-        <div style="font-weight: bold;">AlphaSoul 历史战绩</div>
-        <div>
-            <button @click="curId=0">AlphaSoul令和</button>
-            <button @click="curId=1">AlphaSoul科学</button>
-            <button @click="curId=2">AlphaSoul昭和</button>
-            <button @click="curId=3">AlphaSoul玄学</button>
-        </div>
+        <button @click="curId=0">AlphaSoul令和</button>
+        <button @click="curId=1">AlphaSoul科学</button>
+        <button @click="curId=2">AlphaSoul昭和</button>
+        <button @click="curId=3">AlphaSoul玄学</button>
     </div>
     <div v-if="battle[curId] != undefined" id="detailDiv">
         <div style="overflow:hidden;">
@@ -199,8 +197,9 @@ export default {
         }
     }
     #tabDiv{
-        height: 60px;
+        height: 40px;
         overflow: hidden;
+        margin-top: 10px;
     }
     #detailDiv{
         overflow-y: scroll;

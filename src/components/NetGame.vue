@@ -67,7 +67,7 @@
                 <div v-for="pids in 4" :key="pids" :class="['ScoreDiv',['bottom','right','top','left'][pids-1]]">
                     <div class="windDiv">{{ ['东','南','西','北'][((pids-1)-gameStatus.qinjia+4)%4] }}</div>
                     <div class="turnDiv">
-                        <div :class="['scoreTxt',curWind==(pids-1)?'turned':'']">{{ gameStatus.score[pids-1] }}</div>
+                        <div :class="['scoreTxt',curWind==(pids-1)?'turned':'']">{{ score[pids-1] }}</div>
                         <div class="lizhiDiv" v-if="gameStatus.playerLizhi[pids-1]">・</div>
                     </div>
                 </div>
@@ -87,7 +87,7 @@
                     <div v-for="(hcode,hindex) in humsg.hand" :key="'h'+hindex" :class="['PaiDivS',hcode.length==3?'LastS':'']">
                         <img :src="imgUrl(hcode.substr(0,2))" />
                     </div>
-                    <div v-for="(fcode,findex) in fuluStack[humsg.seat]" :key="'f'+findex" class="Mianzi">
+                    <div v-for="(fcode,findex) in gameStatus.fuluStack[humsg.seat]" :key="'f'+findex" class="Mianzi">
                         <div v-for="(p,i) in sortFulu(fcode)" :key="'ch'+i" :class="['PaiDivS',p.length>2?'PaiRotateS':'']">
                             <img :src="imgUrl(p.substr(0,2))" />
                         </div>
@@ -189,8 +189,8 @@
                     <transition-group name="flip-list" class="handDiv" tag="div">
                         <div v-for="(code,index) in handFlip()" :key="code" @mouseenter="tingPai=getTingPai(index)" @mouseleave="hintOn=false;" @click="discardPai(index)" :class="['PaiDiv', checkLast(index,gameStatus.seat)?'Last':'']">
                             <img :src="imgUrl(code.substr(0,2))" />
-                            <div v-if="lizhiMask(index)" :class="['BigMask']"></div>
-                            <div v-if="normalized!=undefined && normalized[index]!=-1" :style="'mix-blend-mode:color; background:rgba(159, 240, 72,'+normalized[index]/2+');'" class="BigMask" />
+                            <div v-if="lizhiMask(index)" :class="['GrayMask']"></div>
+                            <div v-if="optFlag.qie && normalized!=undefined" :style="'mix-blend-mode:color; background:rgba(159, 240, 72,'+normalized[code.substr(0,2)]/2+');'" class="BigMask" />
                         </div>
                     </transition-group>
                     <div class="fuluDiv">
@@ -224,7 +224,7 @@ export default {
             ws: Object,
             serverConnected: false,
             wsMsg: '',
-            normalized: [],
+            normalized: {},
             gameStatus: {
                 seat: 0,
                 qinjia: 0,
@@ -232,7 +232,6 @@ export default {
                 zifeng: 0,
                 changbang: 0,
                 lizhibang: 0,
-                score: [25000,25000,25000,25000],
                 restyama: 0,
                 bao: [],
                 playerLizhi: [false,false,false,false],
@@ -240,6 +239,7 @@ export default {
                 fuluStack: [[],[],[],[]],
                 riverStack: [[],[],[],[]],
             },
+            score: [25000,25000,25000,25000],
             tweenedScore: [0,0,0,0],
             fenpei: [0,0,0,0],
             tweenedFenpei: [0,0,0,0],
@@ -477,7 +477,7 @@ export default {
         playLizhiEnded(e){
             this.txtMsg[e.seat] = '';
             this.gameStatus.lizhibang++;
-            this.gameStatus.score[e.seat] -= 1000;
+            this.score[e.seat] -= 1000;
         },
         decode: function(e){
             console.log(e);
@@ -513,7 +513,7 @@ export default {
                 this.gameStatus.zifeng = e.zifeng;
                 this.gameStatus.changbang = e.changbang;
                 this.gameStatus.lizhibang = e.lizhibang;
-                this.gameStatus.score = e.score;
+                this.score = e.score;
                 this.gameStatus.bao = e.bao;
                 for(var i=0;i<4;i++){
                     if(i == this.gameStatus.seat) this.gameStatus.handStack[i] = e.handStack;
@@ -784,22 +784,18 @@ export default {
             return this.lizhiOn && !this.canDiscard[index];
         },
         dyeTile(cal_res){
-            console.log('emited!');
             let hand = this.gameStatus.handStack[this.gameStatus.seat];
-            var normalized = [];
+            var normalized = {};
             var min = 999,max = 0;
             for(let res of cal_res){
                 if(res[3] == -1) continue;
                 min = Math.min(min,res[3]);
                 max = Math.max(max,res[3]);
             }
-            for(var i in hand){
-                for(let res of cal_res){
-                    if(hand[i] == res[0]){
-                        let ss = res[3] == -1 ? 0:((res[3]-min)/(max-min)).toFixed(2);
-                        normalized.push(ss);
-                    }
-                }
+            console.log('emited!',max,min);
+            for(let res of cal_res){
+                let ss = res[3] == -1 ? 0:((res[3]-min)/(max-min)).toFixed(2);
+                normalized[res[0]] = ss;
             }
             this.normalized = normalized;
         },
@@ -861,7 +857,7 @@ export default {
             }
             if(!this.scoreChangeOn){
                 this.scoreChangeOn = true;
-                this.tweenedScore = this.gameStatus.score;
+                this.tweenedScore = this.score;
                 if(fp == undefined){
                     fp = [0,0,0,0];
                     for(var msg of this.huList){
@@ -873,11 +869,11 @@ export default {
                 }
                 this.tweenedFenpei = fp;
                 var newscore = [0,0,0,0];
-                for(var i in this.gameStatus.score){
-                    newscore[i] = this.gameStatus.score[i]+fp[i];
+                for(var i in this.score){
+                    newscore[i] = this.score[i]+fp[i];
                 }
                 setTimeout(() => {
-                    this.gameStatus.score = newscore;
+                    this.score = newscore;
                     this.fenpei = [0,0,0,0];
                 }, 1000);
                 return;
@@ -966,10 +962,10 @@ export default {
         },
         sortScore: function(){
             var plist = [];
-            for(var ss in this.gameStatus.score){
+            for(var ss in this.score){
                 plist.push({
                     id: ss,
-                    score: this.gameStatus.score[ss],
+                    score: this.score[ss],
                     wind: ss
                 });
             }
@@ -1005,7 +1001,7 @@ export default {
     transition: all .5s;
 }
 .flip-list-leave-active {
-    // position: fixed; //absolute;
+    position: absolute; //;
     transition: all .2s;
 }
 </style>

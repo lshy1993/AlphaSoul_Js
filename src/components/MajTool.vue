@@ -105,13 +105,17 @@
         </tr>
         <tr v-for="(list,index) in resShow" :style="list[1]>n_xiangting?'background:rgba(224,54,54,0.5)':'background:rgba(159, 240, 72,'+normalized[list[0]]+')'" :key="index" >
           <td>
-            <img :src="imgUrl(list[0])" width="40" height="65"/>
+            <div class="PaiDivS">
+              <img :src="imgUrl(list[0])" />
+            </div>
           </td>
           <td>{{ list[1] }}</td>
           <td class="PaiList">
-            <div v-for="(pcode,ind) in list[2]" :key="ind" :class="['PaiDiv']">
-              <img :src="imgUrl(pcode)" width="40" height="65"/>
-              ×{{ paishu[pcode[1]][pcode[0]] }}
+            <div v-for="(pcode,ind) in list[2]" :key="ind" style="display:inline-block;" >
+              <div class="PaiDivS">
+                <img :src="imgUrl(pcode)" />
+              </div>
+              <div>×{{ paishu[pcode[1]][pcode[0]] }}</div>
             </div>
           </td>
           <td>{{ Math.floor(list[3]) }}</td>
@@ -136,12 +140,14 @@
         </tr>
         <tr v-for="(list,index) in ting_res" :key="index">
           <td>
-            <img :src="imgUrl(list[0])" width="40" height="65"/>
+            <div class="PaiDivS">
+              <img :src="imgUrl(list[0])" />
+            </div>
           </td>
           <td>{{ list[1] }}</td>
           <td class="PaiList">
-            <div v-for="(pcode,ind) in list[2]" :key="ind" :class="['PaiDiv', ind==list[2].length-1?'Last':'']" >
-              <img :src="imgUrl(pcode)" width="40" height="65"/>
+            <div v-for="(pcode,ind) in list[2]" :key="ind" :class="['PaiDivS', ind==list[2].length-1?'Last':'']" >
+              <img :src="imgUrl(pcode)" />
             </div>
           </td>
           <td>{{ list[3].defen }}</td>
@@ -313,7 +319,6 @@ export default {
         }
         this.ting_res = tingRes;
       }else if(this.handStack.length == 14){
-        console.log('asss');
         this.n_xiangting =  this.aiplayer.fulu_xiangting(this.handStack,this.fuluStack);
         var hupai = this.handStack[this.handStack.length-1];
         if(this.n_xiangting == -1){

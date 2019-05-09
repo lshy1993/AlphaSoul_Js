@@ -11,7 +11,7 @@
     "@tweenjs/tween.js": "^17.3.0",
     "axios": "^0.18.0",
     "howler": "^2.1.2",
-    "node-sass": "^4.11.0",
+    "node-sass": "^4.12.0",
     "npm": "^6.9.0",
     "sass-loader": "^7.1.0",
     "vue": "^2.6.6",

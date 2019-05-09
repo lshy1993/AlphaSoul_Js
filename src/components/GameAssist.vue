@@ -1,12 +1,13 @@
 <template>
 <div id="ConsoleDiv" class="BorderDiv">
     <h2>AlphaConsole</h2>
-    <div style="width: 280px;">
-        <div v-for="(code,index) in ai.cal_res" :key="index" style="float:left;">
+    <div style="width: 360px;">
+        <div v-for="(code,index) in ai.cal_res" :key="index" style="width: 60px; float:left;">
             <div class="PaiDivS">
                 <img :src="imgUrl(code[0].substr(0,2))" />
             </div>
             <div>{{ code[1] }}</div>
+            <div>{{ code[3].toFixed(2) }}</div>
         </div>
     </div>
 </div>
@@ -38,7 +39,7 @@ export default {
             this.ai.playerLizhi = newVal.playerLizhi;
             this.ai.qinjia = newVal.qinjia;
             this.ai.riverStack = newVal.riverStack;
-            this.ai.score = newVal.score;
+            // this.ai.score = newVal.score;
         }
     },
     methods: {
@@ -54,7 +55,7 @@ export default {
             this.ai.playerLizhi = newVal.playerLizhi;
             this.ai.qinjia = newVal.qinjia;
             this.ai.riverStack = newVal.riverStack;
-            this.ai.score = newVal.score;
+            // this.ai.score = newVal.score;
         },
         Calculate: function(){
             console.log('cal!');

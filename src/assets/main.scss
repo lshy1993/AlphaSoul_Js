@@ -79,48 +79,48 @@ ol, ul {
     }
 }
 h1 {
-  margin: 20px 0;
+    margin: 20px 0;
 }
 h2 {
-  margin: 10px 0;
+    margin: 10px 0;
 }
 h3 {
-  margin: 40px 5px;
+    margin: 40px 5px;
 }
 h4 {
-  margin: 10px 0;
+    margin: 10px 0;
 }
 ul {
-  list-style-type: none;
-  padding: 0;
+    list-style-type: none;
+    padding: 0;
 }
 li {
-  display: inline-block;
-  margin: 0 10px;
+    display: inline-block;
+    margin: 0 10px;
 }
 a {
-  display: block;
-  color: #42b983;
+    display: block;
+    color: #42b983;
 }
 
 .fade-enter-active, .fade-leave-active {
-  /*transition: opacity .5s;*/
-  transition: height 0.5s;
+    /*transition: opacity .5s;*/
+    transition: height 0.5s;
 }
 .fade-enter-to, .fade-leave /* .fade-leave-active below version 2.1.8 */ {
-  height: 276px;
+    height: 276px;
 }
 .fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
-  height: 0;
+    height: 0;
 }
 
 .fadeyaku-enter-active, .fade-leave-active {
-  /*transition: opacity .5s;*/
-  transition: height 0.5s;
+    /*transition: opacity .5s;*/
+    transition: height 0.5s;
 }
 .fadeyaku-enter-to, .fade-leave /* .fade-leave-active below version 2.1.8 */ {
-  height: auto;
+    height: auto;
 }
 .fadeyaku-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
-  height: 0;
+    height: 0;
 }
