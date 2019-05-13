@@ -47,13 +47,13 @@
                     <th>3位率</th>
                     <td>{{ (battle[curId].sumRank3/battle[curId].plays*100).toFixed(2) }}</td>
                     <th>平均顺位</th>
-                    <td>{{ ((battle[curId].sumRank1+battle[curId].sumRank2*2+battle[curId].sumRank3*3+battle[curId].sumRank4*4)/battle[curId].plays*100).toFixed(2) }}</td>
+                    <td>{{ aveRank() }}</td>
                     <th>放铳率</th>
                     <td>{{ (battle[curId].sumChong/battle[curId].subplays*100).toFixed(2) }}</td>
                 </tr>
                 <tr>
                     <th>4位率</th>
-                    <td>{{ (battle[curId].sumRank1/battle[curId].plays*100).toFixed(2) }}</td>
+                    <td>{{ (battle[curId].sumRank4/battle[curId].plays*100).toFixed(2) }}</td>
                     <th>最大连庄</th>
                     <td>{{ battle[curId].maxZhuang }}</td>
                     <th>副露率</th>
@@ -106,8 +106,9 @@ export default {
     },
     methods: {
         getData(){
-            this.$http.get("https://api.liantui.moe/maj").then((response)=>{
-                // console.log(response.data);
+            let apiurl = process.env.NODE_ENV == 'development' ? '//localhost:3000/maj' : 'https://api.liantui.moe/maj';
+            console.log(apiurl);
+            this.$http.get(apiurl).then((response)=>{
                 this.battle = response.data.battle;
                 this.yaku = response.data.yaku;
                 this.maxwin = response.data.maxwin;
@@ -128,11 +129,18 @@ export default {
         getTypeTxt(){
             let type = this.maxwin[this.curId].type;
             if(type<0){
-                return ['','两倍','三倍','四倍','五倍','六倍'][1-type]+'役满';
+                return ['','两倍','三倍','四倍','五倍','六倍'][-1-type]+'役满';
             }
             else{
                 return ['','满贯','跳满','倍满','三倍满','累计役满'][type];
             }
+        },
+        aveRank(){
+            let r1 = this.battle[this.curId].sumRank1;
+            let r2 = this.battle[this.curId].sumRank2;
+            let r3 = this.battle[this.curId].sumRank3;
+            let r4 = this.battle[this.curId].sumRank4;
+            return ((r1+r2*2+r3*3+r4*4)/this.battle[this.curId].plays).toFixed(2)
         },
         imgUrl(code){
             return '/img/'+code+'.png';

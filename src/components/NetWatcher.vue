@@ -2,7 +2,7 @@
 <div>
   <div id="game">
     <!--audio ref="mainAudio"></audio-->
-    <div :class="['BoardDiv','Menu']">
+    <div id="Menu" class="BorderDiv">
         <span>本页面程序仅供学习使用，素材均来自于雀魂游戏</span>
         <h2>AlphaSoul自我对战</h2>
         <h4>v0.0.3</h4>
