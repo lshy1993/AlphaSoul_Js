@@ -190,7 +190,7 @@
                         <div v-for="(code,index) in handFlip()" :key="code" @mouseenter="tingPai=getTingPai(index)" @mouseleave="hintOn=false;" @click="discardPai(index)" :class="['PaiDiv', checkLast(index,gameStatus.seat)?'Last':'']">
                             <img :src="imgUrl(code.substr(0,2))" />
                             <div v-if="lizhiMask(index)" :class="['GrayMask']"></div>
-                            <div v-if="optFlag.qie && normalized!=undefined" :style="'mix-blend-mode:color; background:rgba(159, 240, 72,'+normalized[code.substr(0,2)]/2+');'" class="BigMask" />
+                            <div v-if="aiOn && optFlag.qie && normalized!=undefined" :style="'mix-blend-mode:color; background:rgba(159, 240, 72,'+normalized[code.substr(0,2)]/2+');'" class="BigMask" />
                         </div>
                     </transition-group>
                     <div class="fuluDiv">
@@ -338,6 +338,7 @@ export default {
         reLink: function(){
             var _self = this;
             var wbAdress = process.env.NODE_ENV == 'development' ? 'ws://localhost:8181' : 'wss://liantui.moe:8181';
+            var wbAdress = 'wss://liantui.moe:8181';
             this.ws = new WebSocket(wbAdress);
             this.ws.onopen = function(){
                 console.log("连接服务器成功");
@@ -614,7 +615,9 @@ export default {
             }
 
             if(e.hasOwnProperty('operation')){
-                this.$refs.gamehelper.Calculate();
+                if(this.aiOn){
+                    this.$refs.gamehelper.Calculate();
+                }
                 this.comb = e.operation;
                 this.changeFlag(e.operation);
                 this.lizhi_state = e.lizhi_state;
@@ -689,12 +692,7 @@ export default {
         discardPai: function(index){
             if(!this.optFlag.qie) return;
             if(!this.canDiscard[index]) return;
-
-            this.optFlag.qie = false;
-            this.canDiscard = [];
-            this.comb = {};
-            this.optFlag = {};
-
+            // send msg
             let dapai = this.gameStatus.handStack[this.gameStatus.seat][index];
             this.ws.send(JSON.stringify({
                 type: 'qiepai',
@@ -702,7 +700,11 @@ export default {
                 tile: dapai,
                 lizhi: this.lizhiOn
             }));
-            
+            // reset
+            this.optFlag.qie = false;
+            this.canDiscard = [];
+            this.comb = {};
+            this.optFlag = {};
             this.lizhiOn = false;
             this.gameStatus.handStack[this.gameStatus.seat].splice(index,1);
             this.sortPai(this.gameStatus.seat);
@@ -987,7 +989,7 @@ export default {
 
 <style lang="scss">
 .flip-list-move {
-    position: absolute;
+    // position: absolute;
     transition: all .3s;
 }
 .flip-list-enter {
@@ -1001,7 +1003,7 @@ export default {
     transition: all .5s;
 }
 .flip-list-leave-active {
-    position: absolute; //;
+    // position: absolute; //;
     transition: all .2s;
 }
 </style>
