@@ -163,6 +163,7 @@
 </template>
 
 <script>
+/* eslint-disable */
 import { PaiMaker, TingJudger, PtJudger, RonJudger, MianziMaker } from '../js/majtool.js';
 import { AI_Core } from '../js/ai_core.js';
 import qs from 'qs';

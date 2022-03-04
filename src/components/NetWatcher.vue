@@ -158,6 +158,7 @@
 </template>
 
 <script>
+/* eslint-disable */
 import FanTool from '../js/fan.js';
 import { Howl, Howler } from 'howler';
 var TWEEN = require('@tweenjs/tween.js');

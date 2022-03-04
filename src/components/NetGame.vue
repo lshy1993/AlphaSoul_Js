@@ -7,7 +7,7 @@
     <div id="Menu" class="BorderDiv">
         <span>本页面程序仅供学习使用，素材均来自于雀魂游戏</span>
         <h2>在线练习系统</h2>
-        <h4>v0.0.4</h4>
+        <h4>v0.0.5</h4>
         <div style="margin:10px;">
             <span style="float:left;">AlphaSoul辅助</span>
             <input type="checkbox" id="assist_alpha" v-model="aiOn">
@@ -26,7 +26,7 @@
             <div v-for="index in 5" :key="index" :class="[index<=gameStatus.bao.length?'PaiDivS':'PaiMask']">
                 <img v-if="index<=gameStatus.bao.length" :src="imgUrl(gameStatus.bao[index-1])" />
             </div>
-            <div>场棒：{{ gameStatus.changbang }} 立直棒：{{ gameStatus.lizhibang }}</div>
+            <div style="color:white;">场棒：{{ gameStatus.changbang }} 立直棒：{{ gameStatus.lizhibang }}</div>
         </div>
         <!-- 牌桌 -->
         <div class="TableDiv">
@@ -209,6 +209,7 @@
 </template>
 
 <script>
+/* eslint-disable */
 import GameAssist from './GameAssist.vue';
 import FanTool from '../js/fan.js';
 import { Howl, Howler } from 'howler';
@@ -331,14 +332,15 @@ export default {
         }
         this.reLink();
     },
-    destroyed: function () {
-        this.ws.close();
+    beforeDestroyed() {
+        if(this.ws) this.ws.close();
     },  
     methods: {
         reLink: function(){
             var _self = this;
-            var wbAdress = process.env.NODE_ENV == 'development' ? 'ws://localhost:8181' : 'wss://liantui.moe:8181';
-            var wbAdress = 'wss://liantui.moe:8181';
+            var wbAdress = 'wss://118.27.25.149:8181';
+            // var wbAdress = process.env.NODE_ENV == 'development' ? 'ws://192.168.1.5:8181' : 'ws://ws.moelink.site/'; // ;
+            // console.log(wbAdress);
             this.ws = new WebSocket(wbAdress);
             this.ws.onopen = function(){
                 console.log("连接服务器成功");
@@ -361,6 +363,16 @@ export default {
             this.ws.onmessage = function(msg){
                 var e = JSON.parse(msg.data);
                 _self.decode(e);
+            }
+        },
+        preload: function() {
+            var imgurls = this.preloadImgList();
+            for (let url of imgurls) {
+                let image = new Image()
+                image.src = url;
+                image.onload = () => {
+                    console.log(url+'done');
+                }
             }
         },
         resetParam: function(){
@@ -616,7 +628,10 @@ export default {
 
             if(e.hasOwnProperty('operation')){
                 if(this.aiOn){
-                    this.$refs.gamehelper.Calculate();
+                    if (e['operation'].filter((x)=>{return x['type'] == 1}).length > 0)
+                    {
+                        this.$refs.gamehelper.Calculate();
+                    }
                 }
                 this.comb = e.operation;
                 this.changeFlag(e.operation);
@@ -790,15 +805,17 @@ export default {
             var normalized = {};
             var min = 999,max = 0;
             for(let res of cal_res){
-                if(res[3] == -1) continue;
+                //if(res[3] == -1) continue;
                 min = Math.min(min,res[3]);
                 max = Math.max(max,res[3]);
             }
-            console.log('emited!',max,min);
+            console.log(cal_res);
             for(let res of cal_res){
-                let ss = res[3] == -1 ? 0:((res[3]-min)/(max-min)).toFixed(2);
+                let ss = 0;
+                if(res[3] != -1) ss = (0.2+0.8*(res[3]-min)/(max-min)).toFixed(2);
                 normalized[res[0]] = ss;
             }
+            console.log('normalized!: ',max,min);
             this.normalized = normalized;
         },
         getTingPai: function(index){
@@ -905,9 +922,10 @@ export default {
         preloadImgList: function(){
             var imglist = [];
             for(var ch of ['m','p','s','z']){
-                let maxn = ch=='z'?7:10;
-                for(let n=1;n<=maxn;n++){
-                    imglist.push('/img/'+(n==10?0:n)+ch+'.png');
+                let maxn = ch=='z' ? 7 : 9;
+                let begin = ch=='z' ? 1 : 0;
+                for(let n=begin;n<=maxn;n++){
+                    imglist.push('/img/'+n+ch+'.png');
                 }
             }
             return imglist;

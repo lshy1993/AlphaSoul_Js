@@ -2,11 +2,11 @@
 <div id="ConsoleDiv" class="BorderDiv">
     <h2>AlphaConsole</h2>
     <div style="width: 360px;">
-        <div v-for="(code,index) in ai.cal_res" :key="index" style="width: 60px; float:left;">
+        <div v-for="(code,index) in ai.cal_res" :key="index" style="width: 50px; float:left;">
             <div class="PaiDivS">
                 <img :src="imgUrl(code[0].substr(0,2))" />
             </div>
-            <div>{{ code[1] }}</div>
+            <div>{{ parseInt(code[1]) }}</div>
             <div>{{ code[3].toFixed(2) }}</div>
         </div>
     </div>
@@ -14,6 +14,7 @@
 </template>
 
 <script>
+/* eslint-disable */
 const AI_Core = require('../js/ai_core.js').AI_Core;
 export default {
     name: 'GameAssist',
@@ -58,7 +59,7 @@ export default {
             // this.ai.score = newVal.score;
         },
         Calculate: function(){
-            console.log('cal!');
+            // console.log('cal!');
             this.Init();
             this.ai.FindQie();
             this.$emit("dyeTile",this.ai.cal_res);

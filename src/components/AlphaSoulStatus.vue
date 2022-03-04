@@ -106,7 +106,7 @@ export default {
     },
     methods: {
         getData(){
-            let apiurl = process.env.NODE_ENV == 'development' ? '//localhost:3000/maj' : 'https://api.liantui.moe/maj';
+            let apiurl = process.env.NODE_ENV == 'development' ? '//localhost:3000/maj' : 'https://api.moelink.site/maj';
             console.log(apiurl);
             this.$http.get(apiurl).then((response)=>{
                 this.battle = response.data.battle;

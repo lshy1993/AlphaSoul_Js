@@ -36,19 +36,13 @@ class PaiMaker {
       var kn = p==4?'0m':p==13?'0p':p==22?'0s':paiCode[k];
       resList.push(kn);
     }
-    function cmp(a,b){
-      var tv = {"m":0,"p":1,"s":2,"z":3};
-      a = a.replace('0','5');
-      b = b.replace('0','5');
-      if(a[1] == b[1]){
-        return a[0]-b[0];
-      }
-      return tv[a[1]]-tv[b[1]];
-    }
-    //resList.sort(cmp);
     return resList;
   }
-  // 统计牌组构成
+
+  /**
+   * 统计牌组构成
+   * @param {Array<string>} plist 手牌
+   */
   static GetCount(plist) {
     var paiCount = {
       m: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -57,6 +51,9 @@ class PaiMaker {
       z: [0, 0, 0, 0, 0, 0, 0, 0]
     };
     for (var p of plist) {
+      if(p == undefined){
+        console.log('error, undefined in handstack!:', plist);
+      }
       let num = p[0];
       let ch = p[1];
       if (num == 0) {
@@ -64,6 +61,29 @@ class PaiMaker {
         paiCount[ch][5] += 1;
       }
       paiCount[ch][num] += 1;
+    }
+    return paiCount;
+  }
+
+  /**
+   * 剩余的牌数
+   * @param {Array<string>} plist 手牌
+   */
+  static GetRestCount(plist){
+    var paiCount = {
+      'm': [1, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+      'p': [1, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+      's': [1, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+      'z': [0, 4, 4, 4, 4, 4, 4, 4]
+    };
+    for(var p of plist){
+      let num = p[0];
+      let ch = p[1];
+      if (num == 0) {
+        // 红宝 同时充当0与5，计算2次
+        paiCount[ch][5] -= 1;
+      }
+      paiCount[ch][num] -= 1;
     }
     return paiCount;
   }
@@ -83,9 +103,9 @@ class PaiMaker {
   }
 
   // 获取副露后的代码
-  static FuluCode(mianzi){
+  static FuluCode(fulu){
     var ch,code = "";
-    for(var p of mianzi.split("|")){
+    for(var p of fulu.split("|")){
       ch = p[1];
       code += p;
     }
@@ -100,8 +120,13 @@ class PaiMaker {
     if(mianzi[1] == 6){
       // 加杠牌
       mz = [ mianzi[0].split("|")[1] ];
-    }else{
-      mz = mianzi[0].split("|");
+    }else{//if(mianzi[1] != 1)
+      try {
+        mz = mianzi[0].split("|");
+      } catch (error) {
+        console.log(error,mianzi);
+        throw new Error();
+      }
     }
     for(var p of mz){
       let ii = newHand.indexOf(p);
@@ -115,9 +140,10 @@ class PaiMaker {
     var new_fulu = fulu.concat();
     if(mianzi[1] == 6){
       // 加杠
-      let ori = mianzi[0].split("|");
+      let ori = mianzi[0].split("|")[0];
       for(var i in new_fulu){
-        if(new_fulu[i] == ori) new_fulu[i] = mianzi[0];
+        //if(new_fulu[i] == ori) new_fulu[i] = mianzi[0];
+        if(new_fulu[i] == ori) new_fulu[i] = this.FuluCode(mianzi[0])
       }
     }else{
       new_fulu = new_fulu.concat(this.FuluCode(mianzi[0]));
@@ -149,7 +175,7 @@ class PaiMaker {
 
   static GetBao(baostr) {
     // 根据宝牌代码获取真宝牌
-    var num = baostr[0] - 0 || 5;
+    var num = baostr[0] - '0' || 5;
     var ch = baostr[1];
     if (ch == 'z') {
       if (num == 4) num = 1;
@@ -172,61 +198,83 @@ class PaiMaker {
     return paiCode[i];
   }
 
+  static GetSortPai(hand){
+    function cmp(a,b){
+      var tv = {"m":0,"p":1,"s":2,"z":3};
+      a = a.replace('0','5');
+      b = b.replace('0','5');
+      if(a[1] == b[1]){
+          return a[0]-b[0];
+      }
+      return tv[a[1]]-tv[b[1]];
+    }
+    var nh = hand.concat();
+    nh.sort(cmp);
+    return nh.toString();
+  }
+
+
+
 }
 
 class MianziMaker{
   // 是否能吃
-  static get_chi_mianzi(pCount,fulu,p) {
-      var mianzi = [];
-      var s = p[1];
-      var n = p[0] - '0' || 5;
-      var d = p[2];
-      var bingpai = pCount[s];
-      var p1, p2;
-      // 上家打牌 && 非字牌
-      if (s == 'z' && d != '-') {
-        return mianzi;
+  static get_chi_mianzi(pCount,p) {
+    var mianzi = [];
+    var s = p[1];
+    var n = p[0] - '0' || 5;
+    var d = p[2];
+    var bingpai = pCount[s];
+    var p1, p2;
+    // 上家打牌 && 非字牌
+    if (s == 'z' || d != '-') {
+      return [];
+    }
+    // 存在红宝时 优先计算红
+    const hong = (n)=>{ return n != 5 ? n : bingpai[0] > 0 ? 0 : 5;};
+    // n-2 n-1 n
+    if (3 <= n && bingpai[n-2] > 0 && bingpai[n-1] > 0) {
+      p1 = hong(n-2) + s;
+      p2 = hong(n-1) + s;
+      mianzi.push([p1+"|"+p2+"|"+p,2]);
+      if(n-2 == 5 && bingpai[5] > bingpai[0] && bingpai[0] > 0){
+        mianzi.push([(5+s)+"|"+p2+"|"+p,2]);
       }
-      // n-2 n-1 n
-      if (3 <= n && bingpai[n-2] > 0 && bingpai[n-1] > 0) {
-        p1 = (n-2) + s;
-        p2 = (n-1) + s;
-        mianzi.push([p1+"|"+p2+"|"+p,2]);
-        if(n-2 == 5 && bingpai[0] > 0){
-          mianzi.push([(0+s)+"|"+p2+"|"+p,2]);
-        }
-        if(n-1 == 5 && bingpai[0] > 0){
-          mianzi.push([p1+"|"+(0+s)+"|"+p,2]);
-        }
+      if(n-1 == 5 && bingpai[5] > bingpai[0] && bingpai[0] > 0){
+        mianzi.push([p1+"|"+(5+s)+"|"+p,2]);
       }
-      // n n+1 n+2
-      if (n <= 7 && bingpai[n+1] > 0 && bingpai[n+2] > 0) {
-        p1 = (n+1) + s;
-        p2 = (n+2) + s;
-        mianzi.push([p+"|"+p1+"|"+p2,2]);
-        if(n+1 == 5 && bingpai[0] > 0){
-          mianzi.push([p+"|"+(0+s)+"|"+p2,2]);
-        }
-        if(n+2 == 5 && bingpai[0] > 0){
-          mianzi.push([p+"|"+p1+"|"+(0+s),2]);
-        }
+    }
+
+    // n-1 n n+1
+    if (2 <= n &&  n <= 8 && bingpai[n-1] > 0 && bingpai[n+1] > 0) {
+      p1 = hong(n-1) + s;
+      p2 = hong(n+1) + s;
+      mianzi.push([p1+"|"+p+"|"+p2,2]);
+      if(n-1 == 5 && bingpai[5] > bingpai[0] && bingpai[0] > 0){
+        mianzi.push([(5+s)+"|"+p+"|"+p2,2]);
       }
-      // n-1 n n+1
-      if (2 <= n &&  n <= 8 && bingpai[n-1] > 0 && bingpai[n+1] > 0) {
-        p1 = (n-1) + s;
-        p2 = (n+1) + s;
-        mianzi.push([p1+"|"+p+"|"+p2,2]);
-        if(n-1 == 5 && bingpai[0] > 0){
-          mianzi.push([(0+s)+"|"+p+"|"+p2,2]);
-        }
-        if(n+1 == 5 && bingpai[0] > 0){
-          mianzi.push([p1+"|"+p+"|"+(0+s),2]);
-        }
+      if(n+1 == 5 && bingpai[5] > bingpai[0] && bingpai[0] > 0){
+        mianzi.push([p1+"|"+p+"|"+(5+s),2]);
       }
-      return mianzi;
+    }
+    
+    // n n+1 n+2
+    if (n <= 7 && bingpai[n+1] > 0 && bingpai[n+2] > 0) {
+      p1 = hong(n+1) + s;
+      p2 = hong(n+2) + s;
+      mianzi.push([p+"|"+p1+"|"+p2,2]);
+      if(n+1 == 5 && bingpai[5] > bingpai[0] && bingpai[0] > 0){
+        mianzi.push([p+"|"+(5+s)+"|"+p2,2]);
+      } 
+      if(n+2 == 5 && bingpai[5] > bingpai[0] && bingpai[0] > 0){
+        mianzi.push([p+"|"+p1+"|"+(5+s),2]);
+      }
+    }
+
+    return mianzi;
   }
   // 是否能碰
-  static get_peng_mianzi(pCount,fulu,p) {
+  static get_peng_mianzi(pCount,p) {
     var mianzi = [];
     var s = p[1];
     var n = p[0] - '0' || 5;
@@ -238,59 +286,62 @@ class MianziMaker{
       var p1 = ((n == 5 && bingpai[0] > 0) ? 0 : n) + s;
       var p2 = ((n == 5 && bingpai[0] > 1) ? 0 : n) + s;
       mianzi.push([p1+"|"+p2+"|"+p,3]);
-      if(n == 5 && bingpai[0] > 1){
-        mianzi.push([p1+"|"+5+s+"|"+p,3]);
+      if(n == 5 && bingpai[5] > 2){
+        mianzi.push([(5+s)+"|"+p2+"|"+p,3]);
       }
-      if(n == 5 && bingpai[0] > 0){
-        mianzi.push([5+s+"|"+5+s+"|"+p,3]);
-      }
+      // if(n == 5 && bingpai[5] > bingpai[0] && bingpai[0] > 2){
+      //   mianzi.push([p1+"|"+(5+s)+"|"+p,3]);
+      // }
+
     }
     return mianzi;
   }
   // 是否能杠
   static get_gang_mianzi(pCount,fulu,p) {
-      var mianzi = [];
-      var s = p[1];
-      var n = p[0] - '0' || 5;
-      var shoupai = pCount;
+    var mianzi = [];
+    var s = p[1];
+    var n = p[0] - '0' || 5;
+    var shoupai = pCount;
+    var bingpai = shoupai[s];
+    // 明杠
+    if (p[2] != '_' && bingpai[n] == 3) {
+      var p1 = ((n == 5 && bingpai[0] > 2) ? 0 : n)+s;
+      var p2 = ((n == 5 && bingpai[0] > 1) ? 0 : n)+s;
+      var p3 = ((n == 5 && bingpai[0] > 0) ? 0 : n)+s;
+      mianzi.push([p1+"|"+p2+"|"+p3+"|"+p,5]);
+    }
+    // 加杠
+    if(p[2] != '_') return mianzi;
+    for (var m of fulu) {
+      let ms = m.replace(/0/g,'5').substr(0,4);
+      if (ms == s+n+n+n) {
+        var p0 = ((n == 5 && bingpai[0] > 0) ? 0 : n)+s;
+        mianzi.push([m+"|"+p0,6]);
+      }
+    }
+    // 暗杠
+    for (var s in shoupai) {
       var bingpai = shoupai[s];
-      // 明杠
-      if (bingpai[n] == 3) {
+      for (var n = 1; n < bingpai.length; n++) {
+        if (bingpai[n] == 0) continue;
+        if (bingpai[n] == 4) {
+          var p0 = ((n == 5 && bingpai[0] > 3) ? 0 : n)+s;
           var p1 = ((n == 5 && bingpai[0] > 2) ? 0 : n)+s;
           var p2 = ((n == 5 && bingpai[0] > 1) ? 0 : n)+s;
           var p3 = ((n == 5 && bingpai[0] > 0) ? 0 : n)+s;
-          mianzi.push([p1+"|"+p2+"|"+p3+"|"+p,5]);
+          mianzi.push([p0+"|"+p1+"|"+p2+"|"+p3,4]);
+        }
       }
-      // 暗/加杠
-      for (var s in shoupai) {
-          var bingpai = shoupai[s];
-          for (var n = 1; n < bingpai.length; n++) {
-              if (bingpai[n] == 0) continue;
-              if (bingpai[n] == 4) {
-                  var p0 = ((n == 5 && bingpai[0] > 3) ? 0 : n)+s;
-                  var p1 = ((n == 5 && bingpai[0] > 2) ? 0 : n)+s;
-                  var p2 = ((n == 5 && bingpai[0] > 1) ? 0 : n)+s;
-                  var p3 = ((n == 5 && bingpai[0] > 0) ? 0 : n)+s;
-                  mianzi.push([p0+"|"+p1+"|"+p2+"|"+p3,4]);
-              }
-              else {
-                  for (var m of fulu) {
-                      if (m.replace(/0/g,'5').substr(0,4) == s+n+n+n) {
-                          var p0 = ((n == 5 && bingpai[0] > 0) ? 0 : n)+s;
-                          mianzi.push([m+"|"+p0,6]);
-                      }
-                  }
-              }
-          }
-      }
-      return mianzi;
+    }
+
+    return mianzi;
   }
 
   static GetFuluMianzi(handStack,fuluStack,hupai){
-    var pCount = PaiMaker.GetCountOff(handStack,hupai);
-    var fulumz = this.get_gang_mianzi(pCount,fuluStack,hupai+'-')
-      .concat(this.get_peng_mianzi(pCount,fuluStack,hupai+'-'))
-      .concat(this.get_chi_mianzi(pCount,fuluStack,hupai+'-'));
+    var pCount = PaiMaker.GetCount(handStack,hupai);
+    var fulumz = this.get_gang_mianzi(pCount,fuluStack,hupai)
+      .concat(this.get_peng_mianzi(pCount,hupai))
+      .concat(this.get_chi_mianzi(pCount,hupai));
     return fulumz;
   }
 
@@ -319,7 +370,11 @@ class TingJudger {
     return 13 - m * 3 - d * 2 - g;
   }
 
-  // 求向听数
+  /**
+   * @description 求向听数
+   * @param {Array} paiCount 手牌堆
+   * @param {Array} fulu 副露堆
+   */
   static xiangting(paiCount, fulu) {
     var max = this.xiangting_yiban(paiCount, fulu);
     //if (fulu == undefined || fulu.length > 1) return max;
@@ -377,16 +432,29 @@ class TingJudger {
 
     /* 萬子、筒子、索子、字牌それぞれの面子・搭子の数についてパターンA、Bの
         組合わせで向聴数を計算し、最小値を解とする */
+    // for (var m of rm) {
+    //   for (var p of rp) {
+    //     for (var s of rs) {
+    //       var n_mianzi = m[0] + p[0] + s[0] + z[0] + n_fulou;
+    //       var n_dazi = m[1] + p[1] + s[1] + z[1];
+    //       var n_guli = m[2] + p[2] + s[2] + z[2];
+    //       if (n_mianzi + n_dazi > 4) n_dazi = 4 - n_mianzi;
+    //       // 搭子过多修正
+    //       var xiangting = this._xiangting(n_mianzi, n_dazi, n_guli, jiangpai);
+    //       min_xiangting = Math.min(xiangting, min_xiangting);
+    //     }
+    //   }
+    // }
+
     for (var m of rm) {
       for (var p of rp) {
         for (var s of rs) {
-          var n_mianzi = m[0] + p[0] + s[0] + z[0] + n_fulou;
-          var n_dazi = m[1] + p[1] + s[1] + z[1];
-          var n_guli = m[2] + p[2] + s[2] + z[2];
-          if (n_mianzi + n_dazi > 4) n_dazi = 4 - n_mianzi;
-          // 搭子过多修正
-          var xiangting = this._xiangting(n_mianzi, n_dazi, n_guli, jiangpai);
-          min_xiangting = Math.min(xiangting, min_xiangting);
+          let x = [n_fulou, 0, 0];
+          for (let i = 0; i < 3; i++) {
+              x[i] += m[i] + p[i] + s[i] + z[i];
+          }
+          let n_xiangting = this._xiangting(x[0], x[1], x[2], jiangpai);
+          if (n_xiangting < min_xiangting) min_xiangting = n_xiangting;
         }
       }
     }
@@ -488,7 +556,11 @@ class TingJudger {
     return you_duizi ? 12 - n_yaojiu : 13 - n_yaojiu;
   }
 
-  // 求可以（进张）听的牌
+  /**
+   * 求可以（进张）听的牌
+   * @param {Array<string>} paiCount 手牌堆
+   * @param {Array<string>} fulu 副露堆
+   */
   static tingpai(paiCount, fulu) {
     var pai = [];
     // 原先向听数
@@ -506,6 +578,57 @@ class TingJudger {
     }
     return pai;
   }
+
+  /**
+   * 求可立直牌
+   * @param {Array<string>} handStack 手牌堆
+   * @param {Array<string>} fuluStack 副露堆
+   * @param {String} riverstr 牌河编码
+   */
+  static FindLizhi(handStack,fuluStack,riverstr){
+    var caldic = [];
+    var pCount = PaiMaker.GetCount(handStack);
+    var n_xiangting = this.xiangting(pCount, fuluStack);
+    var lastp;
+    for (var i = 0; i < handStack.length; i++) {
+      // 遍历每一张牌
+      let p = handStack[i];
+      if(lastp == p) continue;
+      lastp = p;
+      var newCount = PaiMaker.GetCountOff(handStack,p);
+      let new_xiangting = this.xiangting(newCount, fuluStack);
+      // 不选择向听数增加的情形？
+      if (new_xiangting > 0 || new_xiangting > n_xiangting){
+        continue;
+      }
+      // 获取有效进张（等待牌）
+      var tingpai = this.tingpai(newCount, fuluStack);
+      if(tingpai.length == 0){
+        continue;
+      }
+      var zhenting = this.IsZhenting(tingpai,riverstr);
+      // 统计枚数(牌价值)
+      caldic.push({
+        dapai: p,
+        ting: tingpai,
+        zhenting: zhenting
+      });
+    }
+    return caldic;
+  }
+  /**
+   * 是否振听
+   * @param {Array<string>} tingpai 听牌列表
+   * @param {String} riverstr 牌河编码
+   */
+  static IsZhenting(tingpai,riverstr){
+    riverstr = riverstr.replace(/0/g,'5');
+    for(var p of tingpai){
+      if(riverstr.match(p)) return true;
+    }
+    return false;
+  }
+
 }
 
 class RonJudger
@@ -520,8 +643,13 @@ class RonJudger
     let guoshim = this.Ron_guoshi(paiCount, moPai);
     // 九宝莲灯
     let jiulianm = this.Ron_jiulian(paiCount, moPai)
+    //副露部分编码
+    var fulu_t = [];
+    for(var p of fulu){
+      fulu_t.push(PaiMaker.FuluCode(p));
+    }
     // 一般 4面1头形
-    let yibanm = this.Ron_normal(paiCount, moPai, fulu);
+    let yibanm = this.Ron_normal(paiCount, moPai, fulu_t);
     return mianzi.concat(qiduim).concat(guoshim).concat(jiulianm).concat(yibanm);
   }
   
@@ -579,35 +707,48 @@ class RonJudger
     return you_duizi ? [mianzi] : [];
   }
   
+  // 9莲宝灯
   static Ron_jiulian(paiCount, hulepai)
   {
     //如果存在字牌 则不是九莲
     if (paiCount['z'].forEach(ele => { return ele>0 })) return [];
-    //遍历4种牌
+    let hun = hulepai[0];// 胡牌数字
+    let hucg = hulepai[2];// 胡牌花色
+    //遍历3种牌
     for (var ch of ['m','p','s'])
     {
       let shoupai = paiCount[ch];
-      let mianzi = ch;
-      //对于该牌型检查
-      for (var n = 1; n <= 9; n++)
-      {
-        //1和9不满3张则无效
-        if ((n == 1 || n == 9) && shoupai[n] < 3) return [];
-        //缺少某一个数字则无效
-        if (shoupai[n] == 0) return [];
-        //牌数
-        let nn = (n == hulepai[0]) ? shoupai[n] - 1 : shoupai[n];
-        for (var i = 0; i < nn; i++)
-        {
-          mianzi += n;
-        }
-      }
+      let mianzi = this.get_jiumian(ch,shoupai,hun);
       if (mianzi.length == 14) {
-        mianzi += hulepai[0]+hulepai[2] + "!";
+        mianzi += hun+hucg+ "!";
         return [[mianzi]];
       }
     }
     return [];
+  }
+  /**
+   * 计算9连
+   * @param {string} ch 
+   * @param {*} shoupai 
+   * @param {string} hulepai 
+   */
+  static get_jiumian(ch,shoupai,hulepai){
+    var mianzi = ch;
+    //1和9不满3张则无效
+    if (shoupai[1] < 3 || shoupai[9] < 3) return mianzi;
+    //对于该牌型检查
+    for (var n = 1; n <= 9; n++)
+    {        
+      //缺少某一个数字则无效
+      if (shoupai[n] == 0) return mianzi;
+      //牌数
+      let nn = (n == hulepai) ? shoupai[n] - 1 : shoupai[n];
+      if(n == 5 && hulepai == '0'){
+        nn = shoupai[n] - 1;
+      }
+      mianzi += n.toString().repeat(nn);
+    }
+    return mianzi;
   }
   
   /// 一般型判定
@@ -634,7 +775,7 @@ class RonJudger
     return mzlist;
   }
   /// 面子拆分
-  static MianziDevide(paiCount,fulou) {
+  static MianziDevide(paiCount,fulu) {
     var all_mianzi = [[]];
     //万饼索分别检测
     for (var ch of ['m', 'p', 's']) {
@@ -658,7 +799,7 @@ class RonJudger
     //组合
     for (var i = 0; i < all_mianzi.length; i++) {
       all_mianzi[i] = all_mianzi[i].concat(mianzi_z)
-        .concat(fulou);
+        .concat(fulu);
     }
     return all_mianzi;
   }
@@ -700,6 +841,7 @@ class RonJudger
   }
 
   static AddMark(mianzi, p) {
+    //console.log(p);
     var regexp = new RegExp("^(" + p[1] + ".*" + (p[0] != '0' ? p[0] : "5") + ")");
     var replacer = "$1" + p[2] + "!";
 
@@ -732,9 +874,11 @@ class PtJudger {
     };
     var pre_hupai = this.get_pre_hupai(param);
     var post_hupai = this.get_post_hupai(
-      shoupai.toString(), param.baopai, param.fubaopai);
-
-    for (var mianzi of RonJudger.Ron(shoupai, rongpai, fulu)) {
+      shoupai.toString()+fulu.toString(), param.baopai, param.fubaopai);
+    console.log(fulu);
+    var res = RonJudger.Ron(shoupai, rongpai, fulu);
+    for (var mianzi of res) {
+      console.log(mianzi);
       var hudi = this.get_hudi(mianzi, param.zhuangfeng, param.menfeng);
       var hupai = this.get_hupai(mianzi, hudi, pre_hupai);
       //console.log(hudi,hupai);
@@ -746,6 +890,7 @@ class PtJudger {
       var baojia2, defen2 = 0;
 
       if (hupai[0].fanshu[0] == '*') {
+        // 役满的情况
         for (var h of hupai) {
           damanguan += h.fanshu.match(/\*/g).length;
           if (h.baojia) {
@@ -775,27 +920,29 @@ class PtJudger {
       var fenpei = [0, 0, 0, 0];
 
       if (defen2 > 0) {
-        if (rongpai) defen2 = defen2 / 2;
+        if (rongpai[2] != '_') defen2 = defen2 / 2;
         defen = defen - defen2;
         defen2 = defen2 * (param.menfeng == 0 ? 6 : 4);
         fenpei[param.menfeng] = defen2;
         fenpei[baojia2] = -defen2;
       }
 
-      var changbang = param.jicun.changbang;
-      var lizhibang = param.jicun.lizhibang;
+      var changbang = param.changbang;
+      var lizhibang = param.lizhibang;
 
-      if (rongpai || defen == 0) {
-        var baojia = defen == 0 ? baojia2
+      if (rongpai[2] != '_' || defen == 0) {
+        // 放铳/包家一人支付
+        var chongjia = defen == 0 ? baojia2
           : rongpai[2] == '+' ? (param.menfeng + 1) % 4
             : rongpai[2] == '=' ? (param.menfeng + 2) % 4
               : rongpai[2] == '-' ? (param.menfeng + 3) % 4
                 : -1;
         defen = Math.ceil(defen * (param.menfeng == 0 ? 6 : 4) / 100) * 100;
         fenpei[param.menfeng] += defen + changbang * 300 + lizhibang * 1000;
-        fenpei[baojia] += -defen - changbang * 300;
+        fenpei[chongjia] += -defen - changbang * 300;
       }
       else {
+        // 自摸
         var zhuangjia = Math.ceil(defen * 2 / 100) * 100;
         var sanjia = Math.ceil(defen / 100) * 100;
         if (param.menfeng == 0) {
@@ -846,12 +993,12 @@ class PtJudger {
     if (hupai == []) return [];
 
     if (hupai.lizhi == 1) pre_hupai.push({ name: '立直', fanshu: 1 });
-    if (hupai.lizhi == 2) pre_hupai.push({ name: 'ダブル立直', fanshu: 2 });
-    if (hupai.yifa) pre_hupai.push({ name: '一発', fanshu: 1 });
+    if (hupai.lizhi == 2) pre_hupai.push({ name: '两立直', fanshu: 2 });
+    if (hupai.yifa) pre_hupai.push({ name: '一发', fanshu: 1 });
     if (hupai.haidi == 1) pre_hupai.push({ name: '海底摸月', fanshu: 1 });
-    if (hupai.haidi == 2) pre_hupai.push({ name: '河底撈魚', fanshu: 1 });
-    if (hupai.lingshang) pre_hupai.push({ name: '嶺上開花', fanshu: 1 });
-    if (hupai.qianggang) pre_hupai.push({ name: '槍槓', fanshu: 1 });
+    if (hupai.haidi == 2) pre_hupai.push({ name: '河底捞鱼', fanshu: 1 });
+    if (hupai.lingshang) pre_hupai.push({ name: '岭上开花', fanshu: 1 });
+    if (hupai.qianggang) pre_hupai.push({ name: '抢杠', fanshu: 1 });
 
     if (hupai.tianhu == 1) pre_hupai = [{ name: '天和', fanshu: '*' }];
     if (hupai.tianhu == 2) pre_hupai = [{ name: '地和', fanshu: '*' }];
@@ -862,7 +1009,8 @@ class PtJudger {
 
   static get_post_hupai(paistr, baopai, fubaopai) {
     var post_hupai = [];
-    var substr = paistr.match(/[mpsz][^mpsz,]*/g) || [];
+    var substr = paistr.match(/[^mpsz,]*[mpsz]/g) || [];
+    // console.log(substr);
     var n_baopai = 0;
     for (var p of baopai) {
       p = PaiMaker.GetBao(p);
@@ -874,11 +1022,14 @@ class PtJudger {
         if (nn) n_baopai += nn.length;
       }
     }
-    if (n_baopai) post_hupai.push({ name: 'ドラ', fanshu: n_baopai });
+    if (n_baopai) post_hupai.push({ name: '宝牌', fanshu: n_baopai });
     var n_hongpai = 0;
     var nn = paistr.match(/0/g);
     if (nn) n_hongpai = nn.length;
-    if (n_hongpai) post_hupai.push({ name: '赤ドラ', fanshu: n_hongpai });
+    if (n_hongpai) post_hupai.push({ name: '红宝牌', fanshu: n_hongpai });
+
+    
+
     var n_fubaopai = 0;
     for (var p of fubaopai) {
       p = PaiMaker.GetBao(p);
@@ -890,7 +1041,7 @@ class PtJudger {
         if (nn) n_fubaopai += nn.length;
       }
     }
-    if (n_fubaopai) post_hupai.push({ name: '裏ドラ', fanshu: n_fubaopai });
+    if (n_fubaopai) post_hupai.push({ name: '里宝牌', fanshu: n_fubaopai });
     return post_hupai;
   }
 
@@ -995,25 +1146,25 @@ class PtJudger {
 
     function menqianqing() {
       if (hudi.menqian && hudi.zimo)
-        return [{ name: '門前清自摸和', fanshu: 1 }];
+        return [{ name: '门前清自摸和', fanshu: 1 }];
       return [];
     }
     function fanpai() {
-      var feng_hanzi = ['東', '南', '西', '北'];
+      var feng_hanzi = ['东', '南', '西', '北'];
       var fanpai_all = [];
       if (hudi.kezi.z[hudi.zhuangfeng + 1])
         fanpai_all.push({
-          name: '場風 ' + feng_hanzi[hudi.zhuangfeng],
+          name: '场风牌 ' + feng_hanzi[hudi.zhuangfeng],
           fanshu: 1
         });
       if (hudi.kezi.z[hudi.menfeng + 1])
         fanpai_all.push({
-          name: '自風 ' + feng_hanzi[hudi.menfeng],
+          name: '门风牌 ' + feng_hanzi[hudi.menfeng],
           fanshu: 1
         });
-      if (hudi.kezi.z[5]) fanpai_all.push({ name: '翻牌 白', fanshu: 1 });
-      if (hudi.kezi.z[6]) fanpai_all.push({ name: '翻牌 發', fanshu: 1 });
-      if (hudi.kezi.z[7]) fanpai_all.push({ name: '翻牌 中', fanshu: 1 });
+      if (hudi.kezi.z[5]) fanpai_all.push({ name: '役牌 白', fanshu: 1 });
+      if (hudi.kezi.z[6]) fanpai_all.push({ name: '役牌 发', fanshu: 1 });
+      if (hudi.kezi.z[7]) fanpai_all.push({ name: '役牌 中', fanshu: 1 });
       return fanpai_all;
     }
     function pinghu() {
@@ -1033,14 +1184,14 @@ class PtJudger {
           if (hudi.shunzi[s][m] > 1) beikou++;
         }
       }
-      if (beikou == 1) return [{ name: '一盃口', fanshu: 1 }];
+      if (beikou == 1) return [{ name: '一杯口', fanshu: 1 }];
       return [];
     }
     function sansetongshun() {
       var shunzi = hudi.shunzi;
       for (var m in shunzi.m) {
         if (shunzi.p[m] && shunzi.s[m])
-          return [{ name: '三色同順', fanshu: (hudi.menqian ? 2 : 1) }];
+          return [{ name: '三色同顺', fanshu: (hudi.menqian ? 2 : 1) }];
       }
       return [];
     }
@@ -1048,21 +1199,21 @@ class PtJudger {
       var shunzi = hudi.shunzi;
       for (var s in shunzi) {
         if (shunzi[s][123] && shunzi[s][456] && shunzi[s][789])
-          return [{ name: '一気通貫', fanshu: (hudi.menqian ? 2 : 1) }];
+          return [{ name: '一气通贯', fanshu: (hudi.menqian ? 2 : 1) }];
       }
       return [];
     }
     function hunquandaiyaojiu() {
       if (hudi.n_yaojiu == 5 && hudi.n_shunzi > 0 && hudi.n_zipai > 0)
-        return [{ name: '混全帯幺九', fanshu: (hudi.menqian ? 2 : 1) }];
+        return [{ name: '混全带幺九', fanshu: (hudi.menqian ? 2 : 1) }];
       return [];
     }
     function qiduizi() {
-      if (mianzi.length == 7) return [{ name: '七対子', fanshu: 2 }];
+      if (mianzi.length == 7) return [{ name: '七对子', fanshu: 2 }];
       return [];
     }
     function duiduihu() {
-      if (hudi.n_kezi == 4) return [{ name: '対々和', fanshu: 2 }];
+      if (hudi.n_kezi == 4) return [{ name: '对对胡', fanshu: 2 }];
       return [];
     }
     function sananke() {
@@ -1070,7 +1221,7 @@ class PtJudger {
       return [];
     }
     function sangangzi() {
-      if (hudi.n_gangzi == 3) return [{ name: '三槓子', fanshu: 2 }];
+      if (hudi.n_gangzi == 3) return [{ name: '三杠子', fanshu: 2 }];
       return [];
     }
     function sansetongke() {
@@ -1084,7 +1235,7 @@ class PtJudger {
     function hunlaotou() {
       if (hudi.n_yaojiu == mianzi.length
         && hudi.n_shunzi == 0 && hudi.n_zipai > 0)
-        return [{ name: '混老頭', fanshu: 2 }];
+        return [{ name: '混老头', fanshu: 2 }];
       return [];
     }
     function xiaosanyuan() {
@@ -1105,7 +1256,7 @@ class PtJudger {
     }
     function chunquandaiyaojiu() {
       if (hudi.n_yaojiu == 5 && hudi.n_shunzi > 0 && hudi.n_zipai == 0)
-        return [{ name: '純全帯幺九', fanshu: (hudi.menqian ? 3 : 2) }];
+        return [{ name: '纯全带幺九', fanshu: (hudi.menqian ? 3 : 2) }];
       return [];
     }
     function erbeikou() {
@@ -1117,7 +1268,7 @@ class PtJudger {
           if (hudi.shunzi[s][m] > 1) beikou++;
         }
       }
-      if (beikou == 2) return [{ name: '二盃口', fanshu: 3 }];
+      if (beikou == 2) return [{ name: '二杯口', fanshu: 3 }];
       return [];
     }
     function qingyise() {
@@ -1133,12 +1284,12 @@ class PtJudger {
 
     function guoshiwushuang() {
       if (mianzi.length != 13) return [];
-      if (hudi.danqi) return [{ name: '国士無双十三面', fanshu: '**' }];
-      else return [{ name: '国士無双', fanshu: '*' }];
+      if (hudi.danqi) return [{ name: '国士无双十三面', fanshu: '**' }];
+      else return [{ name: '国士无双', fanshu: '*' }];
     }
     function sianke() {
       if (hudi.n_ankezi != 4) return [];
-      if (hudi.danqi) return [{ name: '四暗刻単騎', fanshu: '**' }];
+      if (hudi.danqi) return [{ name: '四暗刻单骑', fanshu: '**' }];
       else return [{ name: '四暗刻', fanshu: '*' }];
     }
     function dasanyuan() {
@@ -1177,23 +1328,23 @@ class PtJudger {
         return [];
       if (mianzi.filter(function (m) { return m.match(/^s.*[1579]/) }).length > 0)
         return [];
-      return [{ name: '緑一色', fanshu: '*' }];
+      return [{ name: '绿一色', fanshu: '*' }];
     }
     function qinglaotou() {
       if (hudi.n_kezi == 4 && hudi.n_yaojiu == 5 && hudi.n_zipai == 0)
-        return [{ name: '清老頭', fanshu: '*' }];
+        return [{ name: '清老头', fanshu: '*' }];
       return [];
     }
     function sigangzi() {
       if (hudi.n_gangzi == 4)
-        return [{ name: '四槓子', fanshu: '*' }];
+        return [{ name: '四杠子', fanshu: '*' }];
       return [];
     }
     function jiulianbaodeng() {
       if (mianzi.length != 1) return [];
       if (mianzi[0].match(/^[mps]1112345678999/))
-        return [{ name: '純正九蓮宝燈', fanshu: '**' }];
-      else return [{ name: '九蓮宝燈', fanshu: '*' }];
+        return [{ name: '纯正九莲宝灯', fanshu: '**' }];
+      else return [{ name: '九莲宝灯', fanshu: '*' }];
     }
 
     var damanguan = (pre_hupai.length > 0 && pre_hupai[0].fanshu[0] == '*')

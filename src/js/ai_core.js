@@ -50,6 +50,34 @@ class AI_Core {
       's': [1, 4, 4, 4, 4, 4, 4, 4, 4, 4],
       'z': [0, 4, 4, 4, 4, 4, 4, 4]
     };
+    // 4家现物
+    this.xianwu = [{},{},{},{}];
+    // 4家立直状态 0：无 1：立 2：w立
+    this.playerLizhi = [0, 0, 0, 0];
+    // 个人手牌堆
+    this.handStack = [];
+    // 个人展露堆（含暗杠）
+    this.fuluStack = [];
+    // 上张打牌
+    this.lastDiscard;
+  }
+
+  // 计算牌危险度
+  weixian(pai, l) {
+    var ch = pai[1];
+    var n = pai[0]-0||5;
+    if (this.xianwu[l][pai]) return 0;
+    if (ch == 'z')   return Math.min(this.paishu[ch][n], 3);
+    if (n == 1)     return this.xianwu[l][(n+3)+ch] ? 3 : 6;
+    if (n == 9)     return this.xianwu[l][(n-3)+ch] ? 3 : 6;
+    if (n == 2)     return this.xianwu[l][(n+3)+ch] ? 4 : 8;
+    if (n == 8)     return this.xianwu[l][(n-3)+ch] ? 4 : 8;
+    if (n == 3)     return this.xianwu[l][(n+3)+ch] ? 5 : 8;
+    if (n == 7)     return this.xianwu[l][(n-3)+ch] ? 5 : 8;
+
+    return this.xianwu[l][(n-3)+ch] && this.xianwu[l][(n+3)+ch] ?  4
+          : this.xianwu[l][(n-3)+ch] || this.xianwu[l][(n+3)+ch] ?  8
+          :                                                      12;
   }
 
   // 计算牌的价值
@@ -67,7 +95,7 @@ class AI_Core {
     var rv;
     var ch = p[1];
     var n = p[0] - 0 || 5;
-
+    
     if (ch == 'z') {
       rv = this.paishu[ch][n] * weight(n,ch);
     }
@@ -122,6 +150,7 @@ class AI_Core {
     return pai;
   }
 
+  // 副露向听数判定
   fulu_xiangting(hand,fulu) {
     var shoupai = PaiMaker.GetCount(hand);
     /* 各役向けの向聴数のうち最低の向聴数を選択する */
@@ -133,21 +162,20 @@ class AI_Core {
     var yisep = this.xiangting_yise(shoupai,fulu,'p');
     var yises = this.xiangting_yise(shoupai,fulu,'s');
 
-    //console.log({"鸣牌":fulu,"门清":menqing,"役牌":fanpai,"断幺九":duanyao,"对对":duidui,"m清/混一色":yisem,"p清/混一色":yisep,"s清/混一色":yises});
+    // console.log({"鸣牌":fulu,"门清":menqing,"役牌":fanpai,"断幺九":duanyao,"对对":duidui,"m清/混一色":yisem,"p清/混一色":yisep,"s清/混一色":yises});
 
     return Math.min(
-      menqing,fanpai,duanyao,duidui
-      ,yisem,yisep,yises
+      menqing,fanpai,duanyao,duidui,yisem,yisep,yises
     );
   }
 
   // 向听数-门清
   xiangting_menqian(shoupai,fulu) {
     // 有副露则无穷大
-    if (fulu.filter((m) => { return m.match(/[\-\+\=]/) }).length)
+    if (fulu.filter((m) => { return m.match(/[\-\+\=]/) }).length > 0)
       return Infinity;
     // 利用一般思路
-    return TingJudger.xiangting(shoupai,[]);
+    return TingJudger.xiangting(shoupai,fulu);
   }
 
   // 向听数-役牌
@@ -169,7 +197,7 @@ class AI_Core {
       var new_shoupai = PaiMaker.CopyCount(shoupai);            // 手牌を複製し、
       new_shoupai.z[back] = 0;             // バック対象の牌で
       var new_fulu = fulu.concat();
-      new_fulu.push('z' + n + n + n + '=');       // 明刻を作る
+      new_fulu.push('z' + back + back + back + '=');       // 明刻を作る
       return TingJudger.xiangting(new_shoupai,new_fulu) + 1;
       // 汎用の向聴数計算ルーチンの結果に1加える
     }
@@ -230,8 +258,11 @@ class AI_Core {
 
   // 从统计中删除牌
   deletePai(pai){
-    let num = pai[0] == '0'? 5 : pai[0];
+    let num = pai[0];
     let ch = pai[1];
+    if(num == 0){
+      this.paishu[ch][5] -= 1;
+    }
     this.paishu[ch][num] -= 1;
   }
 
@@ -251,29 +282,31 @@ class AI_Core {
   FindFulu(mianzi){
     // 向听数<3 允许吃碰
     var n_xiangting = this.fulu_xiangting(this.handStack,this.fuluStack);
-    var fulou = [];
+    var fulou = undefined;
     if(n_xiangting >= 0 && n_xiangting < 3){
       var max = this.EvalHand(this.handStack,this.fuluStack,this.paishu);
-      console.log(this.paishu);
-      console.log("门清收益：",max,"副露可能: ",mianzi);
+      //console.log(this.paishu);
+      //console.log("门清收益：",max,"副露可能: ",mianzi);
       // 计算每种副露形式的收益
       for (var m of mianzi) {
         var new_handStack = PaiMaker.GetFuluOff(this.handStack,m);
         var new_fuluStack = PaiMaker.GetFulu(this.fuluStack,m);
         // 还是3向听以上
         let fxt = this.fulu_xiangting(new_handStack,new_fuluStack);
-        if (fxt >= 3) continue;
+        if (fxt >= 3 || fxt >= n_xiangting) continue;
         // TODO: 评价手牌
         var ev = this.EvalHand(new_handStack,new_fuluStack,this.paishu);
-        fulou.push(m.concat(ev));
+        // fulou.push(m.concat(ev));
         // console.log(m,ev);
-        // if (ev > max) {
-        //   max = ev;
-        //   fulou = m;
-        // }
+        if (ev > max) {
+          max = ev;
+          fulou = m;
+        }
       }
     }
+    if(fulou != undefined) console.log('副露选择:',fulou,this.handStack);
     return fulou;
+    
   }
 
   // 找出最安全的牌？
@@ -306,32 +339,38 @@ class AI_Core {
     // 克隆手牌
     var handStack = this.handStack.concat();
     var fuluStack = this.fuluStack.concat();
-    this.cal_res = [];
+
+    if(handStack.length + fuluStack.length*3 != 14){
+      console.log("牌数目不正确");
+      return;
+      //throw new Error();
+    }
+
     // 预估胡牌分用参数
     var param = {
       zhuangfeng: this.zhuangfeng,   /* 場風 */
       menfeng: this.zifeng,      /* 自風 */
-      hupai: {
-          lizhi:      1,        /* 門前の場合はリーチする前提 */
-          yifa:       0,
-          qianggang:  false,
-          lingshang:  false,
-          haidi:      0,
-          tianhu:     0
-      },
       baopai:     this.bao,       /* ドラ */
       fubaopai:   [],
-      jicun:      { changbang: 0, lizhibang: 0 }
+      changbang: 0,
+      lizhibang: 0,
+      lizhi:      fuluStack.length>0?0:1,        /* 門前の場合はリーチする前提 */
+      yifa:       0,
+      qianggang:  false,
+      lingshang:  false,
+      haidi:      0,
+      tianhu:     0
     };
 
-    //var n_xiangting = TingJudger.xiangting(PaiMaker.GetCount(handStack), fuluStack);
     var n_xiangting = this.fulu_xiangting(handStack, fuluStack);
     var max = 0, maxfen = 0;
     var lastp;
+    // console.log(n_xiangting,handStack, fuluStack);
 
+    this.cal_res = [];
     for (var i = 0; i < handStack.length; i++) {
       let p = handStack[i];
-      if(p === lastp) continue;
+      if(p == lastp) continue;
       lastp = p;
       // 打牌可能な牌について以下を行う
       var huStack = handStack.concat();
@@ -339,11 +378,9 @@ class AI_Core {
       let new_xiangting = this.fulu_xiangting(huStack, fuluStack);
       // 不选择向听数增加的情形？
       if (new_xiangting > n_xiangting){
-        //this.cal_res.push([p,new_xiangting,0,0]);
         //continue;
       }
       // 获取有效进张（等待牌）
-      //var tingpai = TingJudger.tingpai(newPaiCount, fuluStack);
       var tingpai = this.fulu_tingpai(huStack, fuluStack);
       // 统计枚数(牌价值)
       var x = 1 - this.paijia(p)/100;
@@ -354,27 +391,20 @@ class AI_Core {
         x += this.paishu[ch][num];
         // 听牌(向听为0)时，计算可能的胡牌分数
         if(new_xiangting > 0) continue;
-        // if(num == 5){
-        //   // 红宝 增加一次计算
-        //   let red_tp = 0+ch;
-        //   let ptres = PtJudger.GetFen(huStack.concat(red_tp),fuluStack,red_tp,param);
-        //   //console.log(p,red_tp,ptres);
-        //   if(ptres.defen > 0){
-        //     hufen += ptres.defen*this.paishu[ch][0];
-        //   }
-        // }
         var new_huStack = huStack.concat(tp);
-        var ptres = PtJudger.GetFen(new_huStack,fuluStack,tp,param);
-        //console.log(p,tp,ptres);
+        var ptres = PtJudger.GetFen(new_huStack,fuluStack,tp+'_',param);
+        // console.log(p,tp,ptres);
         if(ptres.defen > 0){
           //计算剩余牌数与得分
           var restNum = this.paishu[ch][num];
-          if(num == 5) restNum-this.paishu[ch][0];
+          if(num == 5) restNum-=this.paishu[ch][0];
           hufen += ptres.defen*restNum;
         }
       }
+      //this.cal_res[p] = [new_xiangting,tingpai,x,hufen];
+      //this.cal_res.push([p,new_xiangting,tingpai,x,hufen]);
       if (new_xiangting > n_xiangting){
-        this.cal_res.push([p,new_xiangting,tingpai,-1,0]);
+        this.cal_res.push([p,new_xiangting,tingpai,0,0]);
       }else{
         this.cal_res.push([p,new_xiangting,tingpai,x,hufen]);
       }
@@ -392,6 +422,15 @@ class AI_Core {
     return dapai;
   }
 
+  /** 记录手牌 */
+  TestEvalHand(){
+    for(var pai of this.handStack){
+      this.deletePai(pai);
+    }
+    // console.log(this.paishu);
+    // return this.EvalHand(this.handStack,this.fuluStack,this.paishu);
+  }
+
   // 从目前手牌中挑选能够打出的牌
   PickDapai(handStack,fuluStack){
     var pai = [];
@@ -401,7 +440,9 @@ class AI_Core {
     var n = mopai && +mopai.match(/\d(?=[\-\+\=])/);
     // 设置副露吃碰后的禁手
     if (n) {
+      var s = mopai[0];
       deny[s+n] = true;
+      //console.log('deny',mopai,s,n);
       if (! mopai.match(/^[mpsz](\d)\1\1.*$/)) {
           if (n < 7 && mopai.match(/^[mps]\d\-\d\d$/)) deny[(n+3)+s] = true;
           if (3 < n && mopai.match(/^[mps]\d\d\d\-$/)) deny[(n-3)+s] = true;

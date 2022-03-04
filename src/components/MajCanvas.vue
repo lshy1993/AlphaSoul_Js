@@ -6,6 +6,7 @@
 </template>
 
 <script>
+/* eslint-disable */
 var TWEEN = require('@tweenjs/tween.js');
 export default {
     name: 'majtest',

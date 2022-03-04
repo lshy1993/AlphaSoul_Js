@@ -17,8 +17,8 @@ export default {
     name: 'Index',
     data() {
         return {
-        ws: Object,
-        msg: ''
+            ws: Object,
+            msg: ''
         }
     },
     methods: {
